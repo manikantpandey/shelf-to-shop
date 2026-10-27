@@ -1,0 +1,118 @@
+{
+  "video": "synth_a.mp4",
+  "consent": "synthetic: Muse Image products, Windows TTS narration, no people",
+  "language_notes": "Hinglish narration by an Indian English TTS voice",
+  "products": [
+    {
+      "n": 1,
+      "what": "blue cotton saree, thin gold border",
+      "appears_s": [
+        0.0,
+        5.0
+      ],
+      "spoken_price_inr": 1200,
+      "spoken_at_s": 2.45,
+      "spoken_end_s": 3.51,
+      "spoken_words": "ye neela wala barah sau",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 2,
+      "what": "red silk saree, wide gold zari border, paper tag 1100",
+      "appears_s": [
+        4.5,
+        11.5
+      ],
+      "spoken_price_inr": 1200,
+      "spoken_at_s": 7.11,
+      "spoken_end_s": 8.69,
+      "spoken_words": "ye laal silk wali ek hazaar do sau",
+      "tag_price_inr": 1100,
+      "notes": "tag reads Rs 1100"
+    },
+    {
+      "n": 3,
+      "what": "green cotton saree (price said before it appears)",
+      "appears_s": [
+        11.0,
+        16.0
+      ],
+      "spoken_price_inr": 850,
+      "spoken_at_s": 9.2,
+      "spoken_end_s": 10.56,
+      "spoken_words": "agla hara wala saadhe aath sau",
+      "tag_price_inr": null,
+      "notes": "whole price said while item 2 is still on screen"
+    },
+    {
+      "n": 4,
+      "what": "light blue cotton saree (second blue item)",
+      "appears_s": [
+        15.5,
+        20.5
+      ],
+      "spoken_price_inr": 900,
+      "spoken_at_s": 18.73,
+      "spoken_end_s": 19.59,
+      "spoken_words": "ye bhi neela, halka wala nau sau",
+      "tag_price_inr": null,
+      "notes": "image shows loose white flowers on the fabric"
+    },
+    {
+      "n": 5,
+      "what": "yellow silk saree (price said after moving past)",
+      "appears_s": [
+        20.0,
+        25.0
+      ],
+      "spoken_price_inr": 1500,
+      "spoken_at_s": 26.75,
+      "spoken_end_s": 27.81,
+      "spoken_words": "peeche wala peela dedh hazaar",
+      "tag_price_inr": null,
+      "notes": "said after item left the screen; background sign 'Cotton 550' is a distractor"
+    },
+    {
+      "n": 6,
+      "what": "pink chiffon saree (no price said)",
+      "appears_s": [
+        24.5,
+        32.0
+      ],
+      "spoken_price_inr": null,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "aur ye gulabi wala bhi dekh lijiye",
+      "tag_price_inr": 1250,
+      "notes": "no price said; printed shelf label 'Pink Chiffon 1250' bottom right"
+    }
+  ],
+  "seeded_errors": [
+    {
+      "kind": "price_conflict",
+      "product_n": 2,
+      "notes": "tag 1100 vs spoken 1200"
+    },
+    {
+      "kind": "price_before_item",
+      "product_n": 3,
+      "notes": "said while item 2 on screen"
+    },
+    {
+      "kind": "same_colour",
+      "product_n": 4,
+      "notes": "second blue saree"
+    },
+    {
+      "kind": "price_after_item",
+      "product_n": 5,
+      "notes": "said while item 6 on screen"
+    },
+    {
+      "kind": "missing_price",
+      "product_n": 6,
+      "notes": "no price said (tag 1250 visible)"
+    }
+  ]
+}

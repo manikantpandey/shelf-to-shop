@@ -55,5 +55,62 @@ Findings:
 ## Spike 5: recorder on a real phone
 Pending: needs your Android phone. Instructions: `spikes/05_recorder/README.md`; run `make spike-5`.
 
-## Spikes 1, 1b, 2, 3
-Pending: run on Day 2 (Oct 28) on your two clips (`spikes/SHOOTING.md`).
+## Preliminary spikes 1, 1b, 2, 3 on a synthetic clip (2026-10-27)
+**Caveat:** no seller clips yet, so these ran on `synth_a` (`spikes/make_synthetic_clip.py`):
+six Muse Image saree photos, panned and cross-faded into a 32 s 1280×720 video, narrated in
+Hinglish by a Windows Indian-English TTS voice placed at exact times. Seeded: a tag that disagrees
+with the spoken price, a price said before its item, one said after, two blue sarees, a product
+with no spoken price. Real clips must confirm everything below; TTS mispronounces some Hindi.
+
+### Spike 1: Muse Spark 1.3, vision only (`spikes/01_video_detect.py`, fps 2, effort medium)
+- **6/6 products found, 0 false**; time ranges overlap labels by 84–96%; best frame inside the item's
+  window 6/6; tag "Rs 1100" read exactly.
+- 9.2k input tokens for 32 s at 2 fps (~140 tokens/frame), 1.7k output, **$0.018, 9 s**.
+- Boxes are on the right item but loose (cover ~60–75% of it, skewed up-left), so they are poor SAM
+  box prompts; their centres are good point prompts (spike 2).
+- Max duration / size: still untested (needs a longer clip; docs give no limit).
+
+### Spike 1b: one call pairs products with spoken prices (video + audio)
+- **muse-spark-1.3: 5/6 prices right** (incl. the price said *before* its item and the no-price item);
+  missed the price said *after* the camera moved on. Spoken timestamps off by 2–3 s (too loose for
+  evidence). $0.027, 19 s.
+- **muse-spark-1.2: 1/6**: returned no prices and ~40% fewer input tokens; it appears not to use the
+  video's audio. Not used.
+- **Use:** an independent second opinion per product, not the timing source.
+
+### Spike 2: SAM 3.1 cut-outs (`spikes/02_segment.py`)
+| Prompt (image mode, best frame) | Confidence | Result |
+|---|---|---|
+| Spark box | 0.24–0.71 | partial, speckled masks |
+| **one point at the Spark box centre** | **0.83–0.99** | **clean full masks 5/6**; the floral one has holes where flowers lie |
+| concept "saree" | 0.95 when found | found nothing for 2/6 items |
+- **Video tracking is not reliable for walkthroughs**: tracks jump between similar items as they leave
+  and enter the frame (track/window IoU 0.22–0.86), as the docs warn. Time ranges come from Spark.
+- `meta-sam-parser` drops long video streams when it reads the socket directly; buffering the SSE
+  events first fixes it (`spikes/02b_sam_video_debug.py`). Responses carry an `x-request-id` header.
+- Cost: image mode $0.0025 per product, ~11–33 s each (run in parallel).
+- **Decision:** image mode on each best frame, positive point(s) inside the Spark box, fill interior
+  holes, fall back to a concept prompt below a confidence threshold.
+
+### Spike 3: transcription timing (`spikes/03_transcribe.py`, `spikes/03b_align.py`)
+- Whole-file transcript comes back **in Devanagari**, with commas at pauses. Turn-level `ENDPOINTING`
+  turns can be 14 s long.
+- Short pause-split clips transcribed alone lose context and degrade badly ("Barasat", "No South").
+- **Best: whole-file text + pause-detected speech spans, aligning comma chunks to spans (method E):
+  timing error ≤ 0.01 s** on every price the ASR heard correctly, vs 0.95 s mean for turn
+  interpolation. Streamed partials (`audioProcessedMs`) are no better than turns.
+- Price recognition: 3/5. The two misses were TTS mispronunciations misheard ("barah sau" →
+  "बड़ा सा", "dedh hazaar" → "दस हजार" = 10,000), so the verifier must flag implausible outliers and
+  Spark's pairing (which got 1200 right) is a needed cross-check. "सादे" (ASR spelling of साढ़े) added
+  to the parser.
+- Cost $0.002 per 32 s.
+
+### Proposed pipeline (for your go-ahead)
+1. detect_products: Muse Spark 1.3 video, fps 2 → items, time ranges, best frame, box, tag text.
+2. transcribe: whole-file ENDPOINTING (Hindi + English bias) + pause spans + chunk alignment.
+3. match_prices: deterministic time alignment of parsed mentions to items; Spark 1b pairing as a
+   second opinion; agreement raises confidence, disagreement or tag conflict becomes a flag.
+4. segment: SAM image mode, point prompts, hole fill, concept fallback.
+5. verify: duplicates, missing prices, tag vs spoken, implausible outliers, low-confidence masks.
+Estimated model cost for a 32 s clip: **~$0.08** (detect 0.018, pairing 0.027, SAM 0.015, ASR 0.002,
+backdrops 0.01–0.02, enrich ~0.005), well under the $0.50 job cap.

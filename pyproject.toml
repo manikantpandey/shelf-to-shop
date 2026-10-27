@@ -55,7 +55,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "PTH"]
 # Devanagari digits and words are intentional in the price vocabulary.
 "src/engine/prices/**" = ["RUF001"]
 # Spikes are throwaway exploration scripts: allow prints and subprocess calls to ffmpeg.
-"spikes/**" = ["T201", "S603", "S607"]
+"spikes/**" = ["T201", "S603", "S607", "E501", "S101", "RUF001", "RUF028", "BLE001"]
 
 [tool.mypy]
 python_version = "3.12"
