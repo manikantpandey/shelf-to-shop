@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { api, ApiError, uploadVideo, type Job } from "../api";
+import { Icon } from "../components/Icon";
 import { cameraProblem, pickMimeType, type CameraProblem } from "../recorder/mime";
 import { useSession } from "../session";
 import { Shell } from "../Shell";
@@ -29,8 +30,10 @@ export function Record() {
   const timerRef = useRef<number | undefined>(undefined);
   const audioRef = useRef<AudioContext | null>(null);
   const previewUrl = useRef<string>("");
+  const startId = useRef(0);
 
   const stopCamera = useCallback(() => {
+    startId.current += 1;
     window.clearInterval(timerRef.current);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -39,6 +42,8 @@ export function Record() {
   }, []);
 
   const startCamera = useCallback(async () => {
+    stopCamera();
+    const id = startId.current;
     setPhase("starting");
     const hasMedia = Boolean(navigator.mediaDevices?.getUserMedia);
     if (!window.isSecureContext || !hasMedia || typeof MediaRecorder === "undefined") {
@@ -56,6 +61,11 @@ export function Record() {
         },
         audio: { echoCancellation: true, noiseSuppression: true },
       });
+      // The screen closed or a newer start began while we waited, so release this camera.
+      if (id !== startId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       if (liveRef.current) liveRef.current.srcObject = stream;
       const [track] = stream.getVideoTracks();
@@ -78,10 +88,11 @@ export function Record() {
       tick();
       setPhase("live");
     } catch (err) {
+      if (id !== startId.current) return;
       setProblem(cameraProblem(err, window.isSecureContext, hasMedia));
       setPhase("problem");
     }
-  }, []);
+  }, [stopCamera]);
 
   useEffect(() => {
     if (phase === "starting") void startCamera();
@@ -192,7 +203,7 @@ export function Record() {
   if (phase === "consent") {
     return (
       <Shell title={t("record.title")} footer={<button type="button" className="btn primary" onClick={agree}>{t("record.consent_agree")}</button>}>
-        <section className="paper" aria-labelledby="rc">
+        <section className="paper-note" aria-labelledby="rc">
           <h2 id="rc">{t("record.consent_title")}</h2>
           <ul>
             <li>{t("record.consent_1")}</li>
@@ -208,7 +219,7 @@ export function Record() {
   if (phase === "problem" && problem) {
     return (
       <Shell title={t("record.title")} footer={gallery}>
-        <section className="paper" role="alert">
+        <section className="paper-note" role="alert">
           <h2>{t(`record.${problem}_title`)}</h2>
           <p>{t(`record.${problem}_body`)}</p>
         </section>
@@ -255,11 +266,16 @@ export function Record() {
         <span className="count" aria-live="polite">
           {recording ? t("record.left", { seconds: left }) : t("record.up_to")}
         </span>
+        {recording ? null : (
+          <Link to="/home" className="icon-btn" aria-label={t("record.close")} style={{ color: "inherit" }}>
+            <Icon name="close" />
+          </Link>
+        )}
       </div>
       <video ref={liveRef} autoPlay playsInline muted aria-label={t("record.title")} />
       <div className="guide">
-        <span className="chip">{t("record.guide_move")}</span>
-        <span className="chip">{t("record.guide_say")}</span>
+        <span className="cue">{t("record.guide_move")}</span>
+        <span className="cue">{t("record.guide_say")}</span>
       </div>
       <div className="mic">
         <meter min={0} max={1} value={level} aria-label="Microphone level" />

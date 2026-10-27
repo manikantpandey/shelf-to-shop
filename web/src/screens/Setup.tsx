@@ -26,7 +26,7 @@ export function Setup() {
       await api("/api/v1/consents/account", { method: "POST" });
       await api("/api/v1/workspace", { method: "PATCH", json: { whatsapp } });
       await refresh();
-      navigate("/record");
+      navigate("/home");
     } catch (err) {
       setError(err instanceof ApiError && err.status === 422 ? err.message : t("app.generic_error"));
     } finally {
@@ -37,6 +37,7 @@ export function Setup() {
   return (
     <Shell
       title={t("setup.title")}
+      bare
       footer={
         <button type="submit" form="setup" className="btn primary"
           disabled={busy || !agree || whatsapp.trim().length < 10}>
@@ -44,8 +45,8 @@ export function Setup() {
         </button>
       }
     >
-      <form id="setup" onSubmit={submit} className="body">
-        <section className="paper" aria-labelledby="notice">
+      <form id="setup" onSubmit={submit} className="stack">
+        <section className="paper-note" aria-labelledby="notice">
           <h2 id="notice">{t("setup.notice_title")}</h2>
           <ul>
             <li>{t("setup.notice_1")}</li>

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api, apiUrl, ApiError, type Flag, type Review as ReviewData, type ReviewProduct } from "../api";
+import { Icon } from "../components/Icon";
+import { PriceTag } from "../components/PriceTag";
 import { formatINR } from "../format";
 import { Shell } from "../Shell";
 
@@ -48,7 +50,7 @@ export function Review() {
     setError("");
     try {
       await api(`/api/v1/jobs/${jobId}/publish`, { method: "POST" });
-      navigate("/catalog");
+      navigate("/home");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("app.generic_error"));
     } finally {
@@ -67,26 +69,30 @@ export function Review() {
   );
 
   return (
-    <Shell title={t("review.found", { count: visible.length })} footer={footer}>
-      <p className={open.length ? "error" : "muted"}>
+    <Shell title={t("review.found", { count: visible.length })} footer={footer} back="/videos">
+      <p className={open.length ? "error" : "ok"}>
         {open.length ? t("review.check", { count: open.length }) : t("review.all_right")}
       </p>
-      <div className="grid">
+      <div className="tiles">
         {data.products.map((p) => (
           <button type="button" key={p.idx} className={`tile${p.removed ? " removed" : ""}`} onClick={() => setEditing(p)}>
-            {p.image_url ? <img src={apiUrl(p.image_url)} alt="" loading="lazy" /> : <div className="noimg" />}
-            {p.removed ? (
-              <span className="tag check">{t("review.removed")}</span>
-            ) : p.price_inr !== null && !needsCheck.has(p.idx) ? (
-              <span className="tag price">{formatINR(p.price_inr)}</span>
-            ) : (
-              <span className="tag check">
-                <span aria-hidden="true">! </span>
-                {p.price_inr !== null ? formatINR(p.price_inr) : t("review.add_price")}
-              </span>
-            )}
-            <span className="name">{title(p)}</span>
-            {p.ai_background ? <span className="meta">{t("review.ai_label")}</span> : null}
+            <span className="photo">
+              {p.image_url ? <img src={apiUrl(p.image_url)} alt="" loading="lazy" /> : null}
+              {p.removed ? (
+                <span className="checktag">{t("review.removed")}</span>
+              ) : p.price_inr !== null && !needsCheck.has(p.idx) ? (
+                <PriceTag value={p.price_inr} />
+              ) : (
+                <span className="checktag">
+                  <Icon name="alert" size={16} />
+                  {p.price_inr !== null ? formatINR(p.price_inr) : t("review.add_price")}
+                </span>
+              )}
+            </span>
+            <span className="body">
+              <span className="name">{title(p)}</span>
+              {p.ai_background ? <span className="meta">{t("review.ai_label")}</span> : null}
+            </span>
           </button>
         ))}
       </div>
@@ -224,7 +230,7 @@ function EditSheet({ product, jobId, onClose, onSaved }: {
         <h2 id="edit-title">{t("review.edit_title")}</h2>
         <div className="field">
           <label htmlFor="p-price">{t("review.price_label")}</label>
-          <input id="p-price" className="price" inputMode="numeric" pattern="[0-9]*" value={price} autoFocus
+          <input id="p-price" className="price-input" inputMode="numeric" pattern="[0-9]*" value={price} autoFocus
             onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} />
         </div>
         <div className="field">

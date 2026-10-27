@@ -1,3 +1,4 @@
+import "@fontsource-variable/anek-devanagari/wdth.css";
 import "@fontsource-variable/noto-sans";
 import "@fontsource-variable/noto-sans-devanagari";
 import "./styles/app.css";

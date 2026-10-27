@@ -1,45 +1,37 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const SHOTS = path.resolve(HERE, "../../docs/screenshots");
 const CLIP = path.resolve(HERE, ".fixtures/clip.mp4");
 
-async function shot(page: Page, name: string) {
-  await page.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: false });
-}
-
-test("seller records, fixes prices, publishes; buyer orders on WhatsApp", async ({ page }) => {
+test("seller records, fixes prices, publishes, edits an item; buyer orders on WhatsApp", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/signin$/);
-  await page.getByLabel("Shop name").fill("Sharma Sarees");
-  await shot(page, "signin-en");
-  await page.getByRole("button", { name: "Start" }).click();
+  await page.getByLabel("Start your own shop").fill("Sharma Sarees");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "What we keep" })).toBeVisible();
   await page.getByLabel("I agree").check();
   await page.getByLabel("WhatsApp number for orders").fill("98765 43210");
-  await shot(page, "setup-en");
   await page.getByRole("button", { name: "Continue" }).click();
 
+  // A new shop lands on Home with the three steps and a way to record.
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByText("Your shop is not published yet.")).toBeVisible();
+  await page.goto("/record");
+
   await expect(page.getByRole("heading", { name: "Before you record" })).toBeVisible();
-  await shot(page, "record-consent-en");
   await page.getByRole("button", { name: "I agree, open camera" }).click();
   await expect(page.getByRole("button", { name: "Record" })).toBeEnabled();
-  await page.waitForTimeout(800); // let the fake camera paint a frame
-  await shot(page, "record-live-en");
 
   // Upload a prepared clip through the gallery fallback (no 60 s wait in tests).
   await page.locator('input[type="file"]').setInputFiles(CLIP);
-  await expect(page.getByRole("heading", { name: "Making your catalog" })).toBeVisible();
-  await shot(page, "processing-en");
+  await expect(page.getByRole("heading", { name: "Making your items" })).toBeVisible();
 
   await expect(page).toHaveURL(/\/review$/, { timeout: 60_000 });
   await expect(page.getByText("2 prices need a check.")).toBeVisible();
-  await shot(page, "review-en");
   await page.getByRole("button", { name: "Fix 2 prices" }).click();
-  await shot(page, "review-questions-en");
 
   // Tag says 900, seller said 850: keep 850. Item 3 has no price: set it.
   await page.getByRole("button", { name: "₹850", exact: true }).click();
@@ -50,25 +42,42 @@ test("seller records, fixes prices, publishes; buyer orders on WhatsApp", async 
   await expect(page.getByText("Everything looks right.")).toBeVisible();
   await page.getByRole("button", { name: "Publish" }).click();
 
-  await expect(page.getByRole("heading", { name: "Your catalog is live" })).toBeVisible();
-  await shot(page, "catalog-en");
+  // Home: the shop is live, and the video is in the history.
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByText("3 items on your shop:")).toBeVisible();
+  await expect(page.locator(".vrow", { hasText: "On shop" })).toHaveCount(1);
 
-  await page.goto("/settings");
-  await shot(page, "settings-en");
+  // Items: mark the red saree sold out; the live shop page updates straight away.
+  await page.goto("/items");
+  await expect(page.locator(".tile")).toHaveCount(3);
+  await page.locator(".tile", { hasText: "₹850" }).click();
+  await page.getByLabel(/Sold out/).check();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved. Your shop page is updated.")).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.locator(".tile", { hasText: "Sold out" })).toHaveCount(1);
+
+  // The video's run details show each step and where each price came from.
+  await page.goto("/videos");
+  await page.locator(".vrow").first().click();
+  await expect(page.getByRole("heading", { name: "How it was read" })).toBeVisible();
+  await expect(page.locator(".steps li")).toHaveCount(8);
 
   await page.goto("/s/sharma-sarees");
   await expect(page.getByText("₹1,200")).toBeVisible();
   await expect(page.getByText("₹650")).toBeVisible();
   const order = page.getByRole("link", { name: "Order on WhatsApp" }).first();
   await expect(order).toHaveAttribute("href", /^https:\/\/wa\.me\/919876543210\?text=/);
+  await expect(page.locator(".tile.soldout")).toHaveCount(1);
   // Photos must actually load (published media is served by the API, not the site).
-  const photo = page.locator(".ledger img").first();
+  const photo = page.locator(".tile img").first();
   await expect.poll(() => photo.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  await shot(page, "shop-en");
+
+  // Each item has its own page: the link the Meta feed and the WhatsApp message point to.
+  await page.locator(".tile .photo").first().click();
+  await expect(page).toHaveURL(/\/s\/sharma-sarees\/p\/sharma-sarees-[0-9a-f]{8}$/);
+  await expect(page.getByRole("link", { name: "Order on WhatsApp" }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "हिंदी" }).click();
   await expect(page.getByRole("link", { name: "WhatsApp पर ऑर्डर करें" }).first()).toBeVisible();
-  await shot(page, "shop-hi");
-  await page.goto("/record");
-  await shot(page, "record-live-hi");
 });

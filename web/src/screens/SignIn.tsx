@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError, setCsrf, type Workspace } from "../api";
+import { Signboard } from "../components/Signboard";
 import { useSession } from "../session";
-import { Shell } from "../Shell";
+import { LanguageButton } from "../Shell";
 
 export function SignIn() {
   const { t } = useTranslation();
@@ -12,47 +13,70 @@ export function SignIn() {
   const { refresh } = useSession();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"" | "sample" | "own">("");
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
+  const signIn = async (body: Record<string, unknown>, kind: "sample" | "own") => {
+    setBusy(kind);
     setError("");
     try {
-      const res = await api<{ workspace: Workspace; csrf_token: string }>("/api/v1/auth/demo", {
-        method: "POST",
-        json: { shop_name: name.trim() },
-      });
+      const res = await api<{ workspace: Workspace; csrf_token: string }>("/api/v1/auth/demo", { method: "POST", json: body });
       setCsrf(res.csrf_token);
       await refresh();
-      navigate("/setup");
+      navigate(kind === "sample" ? "/home" : "/setup");
     } catch (err) {
-      setError(err instanceof ApiError && err.code === "offline" ? t("app.offline") : t("app.generic_error"));
+      if (err instanceof ApiError && err.code === "offline") setError(t("app.offline"));
+      else if (err instanceof ApiError && err.code === "no_sample") setError(t("signin.no_sample"));
+      else setError(t("app.generic_error"));
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   };
 
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    void signIn({ shop_name: name.trim() }, "own");
+  };
+
   return (
-    <Shell
-      title={t("app.name")}
-      footer={
-        <button type="submit" form="signin" className="btn primary" disabled={busy || name.trim().length < 2}>
-          {t("signin.start")}
-        </button>
-      }
-    >
-      <form id="signin" onSubmit={submit} className="body">
-        <h2>{t("signin.title")}</h2>
-        <p className="muted">{t("signin.body")}</p>
-        <div className="field">
-          <label htmlFor="shop">{t("signin.shop_label")}</label>
-          <input id="shop" required minLength={2} maxLength={80} value={name} autoComplete="organization"
-            onChange={(e) => setName(e.target.value)} aria-describedby="shop-hint" />
-          <span id="shop-hint" className="hint">{t("signin.shop_hint")}</span>
+    <div className="welcome">
+      <section className="welcome-hero">
+        <div className="welcome-inner">
+          <div className="spread">
+            <span className="muted small">{t("app.demo_note")}</span>
+            <LanguageButton />
+          </div>
+          <Signboard name={t("app.name")} />
+          <h2>{t("signin.title")}</h2>
+          <ol className="steps-mini">
+            <li>{t("signin.step_1")}</li>
+            <li>{t("signin.step_2")}</li>
+            <li>{t("signin.step_3")}</li>
+          </ol>
         </div>
-        {error ? <p className="error" role="alert">{error}</p> : null}
-      </form>
-    </Shell>
+      </section>
+      <section className="welcome-act">
+        <div className="welcome-inner">
+          <div className="stack" style={{ gap: 8 }}>
+            <button type="button" className="btn primary" disabled={busy !== ""} onClick={() => void signIn({ sample: true }, "sample")}>
+              {busy === "sample" ? t("signin.opening") : t("signin.sample")}
+            </button>
+            <p className="muted small">{t("signin.sample_hint")}</p>
+          </div>
+          <p className="or">{t("signin.or")}</p>
+          <form className="stack" style={{ gap: 12 }} onSubmit={submit}>
+            <div className="field">
+              <label htmlFor="shop">{t("signin.shop_label")}</label>
+              <input id="shop" required minLength={2} maxLength={80} value={name} autoComplete="organization"
+                onChange={(e) => setName(e.target.value)} aria-describedby="shop-hint" />
+              <span id="shop-hint" className="hint">{t("signin.shop_hint")}</span>
+            </div>
+            <button type="submit" className="btn" disabled={busy !== "" || name.trim().length < 2}>
+              {busy === "own" ? t("signin.opening") : t("signin.start")}
+            </button>
+          </form>
+          {error ? <p className="error" role="alert">{error}</p> : null}
+        </div>
+      </section>
+    </div>
   );
 }

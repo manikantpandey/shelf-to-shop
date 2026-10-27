@@ -42,34 +42,47 @@ export function Settings() {
 
   return (
     <Shell title={t("settings.title")}>
-      <form onSubmit={save} className="body">
-        <div className="field">
-          <label htmlFor="s-name">{t("settings.name")}</label>
-          <input id="s-name" value={name} minLength={2} maxLength={80} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="s-wa">{t("settings.whatsapp")}</label>
-          <input id="s-wa" type="tel" inputMode="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
-        </div>
-        <div className="field">
-          <span>{t("settings.language")}</span>
-          <div className="row">
-            <button type="button" className="btn small" aria-pressed={ws.language === "en"} onClick={() => setLanguage("en")}>English</button>
-            <button type="button" className="btn small" lang="hi" aria-pressed={ws.language === "hi"} onClick={() => setLanguage("hi")}>हिंदी</button>
+      <form onSubmit={save} className="stack">
+        <section className="panel" aria-labelledby="shop-h">
+          <h2 id="shop-h">{t("settings.shop")}</h2>
+          <div className="field">
+            <label htmlFor="s-name">{t("settings.name")}</label>
+            <input id="s-name" value={name} minLength={2} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </div>
+          <div className="field">
+            <label htmlFor="s-wa">{t("settings.whatsapp")}</label>
+            <input id="s-wa" type="tel" inputMode="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+            <span className="hint">{t("settings.whatsapp_hint")}</span>
+          </div>
+          <div className="field">
+            <span className="label">{t("settings.language")}</span>
+            <div className="row">
+              <button type="button" className="chip" aria-pressed={ws.language === "en"} onClick={() => setLanguage("en")}>English</button>
+              <button type="button" className="chip" lang="hi" aria-pressed={ws.language === "hi"} onClick={() => setLanguage("hi")}>हिंदी</button>
+            </div>
+          </div>
+        </section>
+        <section className="panel" aria-labelledby="photos-h">
+          <h2 id="photos-h">{t("settings.photos")}</h2>
+          <label className="check">
+            <input type="checkbox" checked={aiMark} onChange={(e) => setAiMark(e.target.checked)} />
+            <span>{t("settings.ai_mark")}</span>
+          </label>
+        </section>
+        <section className="panel" aria-labelledby="data-h">
+          <h2 id="data-h">{t("settings.data")}</h2>
+          <div className="field">
+            <label htmlFor="s-days">{t("settings.retention")}</label>
+            <input id="s-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(Number(e.target.value))} />
+            <span className="hint">{t("settings.retention_hint")}</span>
+          </div>
+        </section>
+        <div className="row">
+          <button type="submit" className="btn primary">{t("settings.save")}</button>
+          {status ? <p role="status" className="ok">{status}</p> : null}
         </div>
-        <label className="check">
-          <input type="checkbox" checked={aiMark} onChange={(e) => setAiMark(e.target.checked)} />
-          <span>{t("settings.ai_mark")}</span>
-        </label>
-        <div className="field">
-          <label htmlFor="s-days">{t("settings.retention")}</label>
-          <input id="s-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(Number(e.target.value))} />
-        </div>
-        <button type="submit" className="btn primary">{t("settings.save")}</button>
-        {status ? <p role="status">{status}</p> : null}
       </form>
-      <button type="button" className="btn danger" onClick={signOut}>{t("settings.signout")}</button>
+      <button type="button" className="btn danger" onClick={signOut} style={{ alignSelf: "flex-start" }}>{t("settings.signout")}</button>
     </Shell>
   );
 }

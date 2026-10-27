@@ -45,29 +45,31 @@ export function Processing() {
     navigate(0);
   };
 
+  const state = (status: string | undefined) =>
+    status === "done" || status === "cached" ? "done" : status === "running" ? "running" : status === "failed" ? "failed" : "";
   const label = (status: string | undefined) => {
-    if (status === "done" || status === "cached") return <span className="done">{t("processing.done")}</span>;
-    if (status === "running") return <span className="running">{t("processing.running")}</span>;
-    if (status === "failed") return <span className="failed">{t("processing.failed")}</span>;
-    return <span />;
+    const s = state(status);
+    return s ? t(`processing.${s}`) : "";
   };
 
   const failed = job?.status === "failed";
   return (
     <Shell
       title={t("processing.title")}
+      back="/videos"
       footer={failed ? <button type="button" className="btn primary" onClick={retry}>{t("processing.try_again")}</button> : undefined}
     >
+      <p className="muted">{failed ? null : t("processing.hint")}</p>
       <ol className="steps" aria-label={t("processing.title")}>
         {STAGES.map((stage, i) => (
-          <li key={stage}>
+          <li key={stage} className={state(job?.stages[stage])}>
             <span className="n">{i + 1}</span>
-            <span>{t(`processing.stage.${stage}`)}</span>
-            {label(job?.stages[stage])}
+            <span className="what">{t(`processing.stage.${stage}`)}</span>
+            <span className="state">{label(job?.stages[stage])}</span>
           </li>
         ))}
       </ol>
-      {failed ? <p className="error" role="alert">{job?.error_message}</p> : <p className="muted">{t("processing.hint")}</p>}
+      {failed ? <p className="error" role="alert">{job?.error_message}</p> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
     </Shell>
   );
