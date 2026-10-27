@@ -36,6 +36,7 @@ from engine.pipeline.schemas import (
     PriceDecision,
     Transcript,
 )
+from engine.pipeline.segment import best_cutout
 from engine.pipeline.verify import verify
 from engine.prices.hinglish import PARSER_VERSION
 from engine.providers.errors import ProviderError
@@ -197,7 +198,7 @@ class Pipeline:
         )
 
         segmented = await self._stage(
-            "segment", 2, {"detect": self.hashes["detect"]}, SegmentOut,
+            "segment", 3, {"detect": self.hashes["detect"]}, SegmentOut,
             lambda: self._segment(products, media),
         )  # fmt: skip
         enriched = await self._stage(
@@ -238,12 +239,16 @@ class Pipeline:
         ctx = self.ctx.for_stage("segment")
 
         async def one(p: DetectedProduct) -> Cutout | None:
-            frame = out_dir / f"frame_{p.idx:02d}.jpg"
-            await asyncio.to_thread(frame_at, media.video, p.best_frame_s, frame)
+            async def grab(t: float, attempt: int) -> Path:
+                frame = out_dir / f"frame_{p.idx:02d}_{attempt}.jpg"
+                await asyncio.to_thread(frame_at, media.video, t, frame)
+                return frame
+
             async with sem:
-                result = await self.p.segmenter.cutout(ctx, frame, p.box, p.noun)
-            if result is None or not result.mask.any():
+                found = await best_cutout(ctx, self.p.segmenter, p, grab)
+            if found is None:
                 return None
+            result, frame = found
             # Real clips (spike on clip A-C): SAM leaves small loose fragments; drop them.
             mask = await asyncio.to_thread(keep_main_regions, result.mask)
             mask_path = out_dir / f"mask_{p.idx:02d}.png"
