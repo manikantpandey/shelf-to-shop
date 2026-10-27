@@ -39,6 +39,7 @@ from engine.pipeline.schemas import (
 from engine.pipeline.segment import best_cutout
 from engine.pipeline.verify import verify
 from engine.prices.hinglish import PARSER_VERSION
+from engine.prices.tags import TAG_PARSER_VERSION, tag_price
 from engine.providers.errors import ProviderError
 from engine.providers.interfaces import Providers
 from engine.runlog import CallContext
@@ -165,11 +166,15 @@ class Pipeline:
         self._emit(name, "done")
         return out
 
-    async def run(self, video: Path) -> RunResult:
+    async def run(self, video: Path, clip: tuple[float, float] | None = None) -> RunResult:
+        """`clip` = (start, length) in seconds: use only that part of a longer video."""
         source = file_digest(video)
+        key: dict[str, object] = {"video": source}
+        if clip is not None:
+            key["clip"] = [round(clip[0], 2), round(clip[1], 2)]
         media = await self._stage(
-            "ingest", 1, {"video": source}, IngestResult,
-            lambda: asyncio.to_thread(ingest, video, self.work / "ingest"),
+            "ingest", 1, key, IngestResult,
+            lambda: asyncio.to_thread(ingest, video, self.work / "ingest", clip=clip),
         )  # fmt: skip
         spans = [(s.start_s, s.end_s) for s in media.speech]
 
@@ -191,7 +196,11 @@ class Pipeline:
             self._stage("detect", 2, {"ingest": self.hashes["ingest"]}, DetectOut, detect),
             self._stage("transcribe", 1, {"ingest": self.hashes["ingest"]}, Transcript, transcribe),
         )
-        products = detected.products
+        # Re-read sign prices with the current rules (a cached detect may predate them).
+        products = [
+            p.model_copy(update={"tag_price_inr": tag_price(p.tag_text)}) if p.tag_text else p
+            for p in detected.products
+        ]
         # Re-read prices from the (possibly cached) transcript with the current parser.
         transcript = transcript.model_copy(
             update={"mentions": mentions_in_chunks(transcript.chunks)}
@@ -210,7 +219,7 @@ class Pipeline:
         matched = await self._stage(
             "match", 2,
             {"detect": self.hashes["detect"], "transcribe": self.hashes["transcribe"],
-             "enrich": self.hashes["enrich"], "parser": PARSER_VERSION},
+             "enrich": self.hashes["enrich"], "parser": PARSER_VERSION, "tags": TAG_PARSER_VERSION},
             MatchOut, lambda: self._match(products, transcript, photo_colours),
         )  # fmt: skip
         verified = await self._stage(

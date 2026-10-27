@@ -45,7 +45,10 @@ TASK = (
     "natural Hindi, and one or two plain sentences describing only what is visible. Never "
     "mention prices, discounts, phone numbers, links or claims you cannot see (no 'best "
     "quality', no 'pure silk' unless it is clear). Give the brand only if it is printed on the "
-    "item. Choose the closest category from the list. "
+    "item. When an item's tag_text is a sign naming the product (for example 'MADHUR SUGAR 5KG "
+    "@ 225/-'), use that product name, brand and pack size in the title instead of describing "
+    "the packaging ('Madhur sugar 5 kg', not 'White sacks on a pallet'). "
+    "Choose the closest category from the list. "
     "Use the item photos in the order given."
 )
 

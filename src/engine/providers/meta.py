@@ -21,7 +21,7 @@ from engine.media.composite import fill_holes
 from engine.media.masks import place_mask
 from engine.pipeline.align import place_turns
 from engine.pipeline.schemas import Box, DetectedProduct, Transcript
-from engine.prices.hinglish import find_prices, likely_prices
+from engine.prices.tags import tag_price
 from engine.providers.interfaces import MaskResult, Providers
 from engine.providers.meta_client import MetaClient
 from engine.providers.metered import Usage, metered_call
@@ -150,10 +150,8 @@ class MetaVideo:
 
 
 def _first_price(text: str | None) -> int | None:
-    if not text:
-        return None
-    found = likely_prices(find_prices(text))
-    return found[0].value if found else None
+    """The selling price printed on a sign or tag (never a discount, weight or phone number)."""
+    return tag_price(text)
 
 
 def _clamp_box(box: Box | None, width: int, height: int) -> Box | None:
