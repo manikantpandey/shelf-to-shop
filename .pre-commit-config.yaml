@@ -1,0 +1,38 @@
+# Install both hook types:
+#   pre-commit install --hook-type pre-commit --hook-type commit-msg
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+        exclude: '\.(ps1|bat)$'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: strip-ai-trailers
+        name: strip AI attribution trailers from commit message
+        entry: bash scripts/strip-ai-trailers.sh
+        language: system
+        stages: [commit-msg]
+        always_run: true
+        pass_filenames: true
