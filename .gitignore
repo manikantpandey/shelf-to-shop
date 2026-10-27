@@ -1,0 +1,54 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data (never commit seller media or databases)
+uploads/
+output/
+storage/
+*.db
+*.db-journal
+*.sqlite3
+
+# Sample media: only clips with written permission, and never in git
+evals/videos/
+spikes/media/
+spikes/out/
+**/*.mp4
+**/*.webm
+**/*.mov
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+web/dist/
+web/dev-dist/
+playwright-report/
+test-results/
+
+# Local HTTPS certs for phone testing
+*.pem
+*.key
+*.crt
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local tool settings
+.claude/settings.local.json

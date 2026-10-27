@@ -1,0 +1,12 @@
+# Normalise line endings so shell scripts and hooks work on Windows checkouts too.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp4 binary
+*.webm binary
+*.woff2 binary

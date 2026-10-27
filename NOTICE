@@ -1,0 +1,10 @@
+Shelf-to-Shop
+Copyright 2026 The Shelf-to-Shop authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party dependency with a non-Apache licence:
+- meta-sam-parser (https://pypi.org/project/meta-sam-parser/), used to decode SAM 3.1 mask output,
+  is licensed by Meta Platforms, Inc. under the "SAM License". It is not included in this repository;
+  it is installed as a dependency. Anyone redistributing it (for example inside a container image) must
+  include a copy of that licence and comply with its terms.
