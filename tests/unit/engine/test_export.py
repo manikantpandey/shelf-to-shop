@@ -202,7 +202,8 @@ def test_shop_items_feed_links_sold_out_and_credit(tmp_path: Any) -> None:
     )
     items = [
         ShopItem(id="gupta-a1", title_en="Pepsi 750 ml", title_hi="पेप्सी", price_inr=40,
-                 image=img, category="soda", brand="Pepsi"),
+                 image=img, category="soda", brand="Pepsi", mrp_inr=45, section="s1",
+                 featured=True),
         ShopItem(id="gupta-b2", title_en="Mirinda can", title_hi="मिरिंडा", price_inr=35,
                  image=img, sold_out=True, category="other",
                  image_credit="Open Food Facts", image_credit_url="https://world.openfoodfacts.org/product/1"),
@@ -218,6 +219,9 @@ def test_shop_items_feed_links_sold_out_and_credit(tmp_path: Any) -> None:
         "https://shop.example/api/v1/public/media/gupta/v3/gupta-a1.jpg"
     )
     assert rows["gupta-a1"]["availability"] == "in stock"
+    # Sold below the printed price: the feed has the MRP as price and ours as sale_price.
+    assert (rows["gupta-a1"]["price"], rows["gupta-a1"]["sale_price"]) == ("45.00 INR", "40.00 INR")
+    assert rows["gupta-b2"]["sale_price"] == ""
     assert rows["gupta-b2"]["availability"] == "out of stock"
     assert rows["gupta-b2"]["fb_product_category"] == ""
     assert any(w.field == "fb_product_category" for w in result.feed_warnings)
@@ -225,3 +229,5 @@ def test_shop_items_feed_links_sold_out_and_credit(tmp_path: Any) -> None:
     sold = next(p for p in catalog["products"] if p["id"] == "gupta-b2")
     assert sold["sold_out"] is True
     assert sold["image_credit"] == "Open Food Facts"
+    pepsi = next(p for p in catalog["products"] if p["id"] == "gupta-a1")
+    assert (pepsi["mrp_display"], pepsi["section"], pepsi["featured"]) == ("₹45", "s1", True)

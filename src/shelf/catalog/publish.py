@@ -9,9 +9,10 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from engine.pipeline.publish import ShopInfo, ShopItem, publish_items
+from shelf.catalog.sections import ensure_sections
 from shelf.config import Settings
 from shelf.core.errors import AppError
-from shelf.db.models import AuditEvent, Catalog, Job, Product, User, Workspace
+from shelf.db.models import AuditEvent, Catalog, Job, Product, Section, User, Workspace
 from shelf.jobs.service import open_flag_count
 from shelf.storage import LocalStorage
 
@@ -25,27 +26,33 @@ def item_id(slug: str, product: Product) -> str:
     return f"{slug}-{product.id.hex[-8:]}"
 
 
-def live_products(db: Session, workspace: Workspace, extra_job: Job | None = None) -> list[Product]:
+def live_products(
+    db: Session, workspace: Workspace, extra_job: Job | None = None, *, with_hidden: bool = False
+) -> list[Product]:
     """Items on the shop: every kept item from published videos (plus the one being published).
 
-    Newest video first; inside a video, the order the items appeared in.
+    In the seller's section order, pinned items first; then newest video first and, inside a
+    video, the order the items appeared in.
     """
+    ensure_sections(db, workspace)
     jobs = [Job.status == "published"]
     if extra_job is not None:
         jobs.append(Job.id == extra_job.id)
-    return list(
-        db.scalars(
-            select(Product)
-            .join(Job, Job.id == Product.job_id)
-            .where(
-                Job.workspace_id == workspace.id,
-                Product.workspace_id == workspace.id,
-                Product.removed.is_(False),
-                or_(*jobs),
-            )
-            .order_by(Job.created_at.desc(), Product.idx)
-        ).all()
+    query = (
+        select(Product)
+        .join(Job, Job.id == Product.job_id)
+        .outerjoin(Section, Section.id == Product.section_id)
+        .where(
+            Job.workspace_id == workspace.id,
+            Product.workspace_id == workspace.id,
+            Product.removed.is_(False),
+            or_(*jobs),
+        )
+        .order_by(Section.position, Product.featured.desc(), Job.created_at.desc(), Product.idx)
     )
+    if not with_hidden:
+        query = query.where(Product.hidden.is_(False))
+    return list(db.scalars(query).all())
 
 
 def publish_job(
@@ -126,6 +133,9 @@ def publish_shop(
             pattern=r.pattern,
             image_credit=r.image_credit,
             image_credit_url=r.image_credit_url,
+            mrp_inr=r.mrp_inr,
+            section=str(r.section_id) if r.section_id else None,
+            featured=r.featured,
         )
         for r in rows
     ]

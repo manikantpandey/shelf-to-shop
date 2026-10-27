@@ -49,6 +49,10 @@ class ShopItem(BaseModel):
     # Set when the photo is not the seller's own (e.g. Open Food Facts, CC BY-SA).
     image_credit: str | None = None
     image_credit_url: str | None = None
+    # Printed price; when above price_inr the shop shows it struck through and the feed has a sale.
+    mrp_inr: int | None = None
+    section: str | None = None
+    featured: bool = False
 
 
 class CatalogProduct(BaseModel):
@@ -64,6 +68,9 @@ class CatalogProduct(BaseModel):
     sold_out: bool
     image_credit: str | None
     image_credit_url: str | None
+    mrp_display: str | None
+    section: str | None
+    featured: bool
     colour: str
     material: str | None
     pattern: str | None
@@ -157,6 +164,7 @@ def publish_items(shop: ShopInfo, items: list[ShopItem], out_dir: Path) -> Publi
             skipped.append((it.id, "no photo"))
             continue
         paise = rupees_to_paise(it.price_inr)
+        mrp = rupees_to_paise(it.mrp_inr) if it.mrp_inr and it.mrp_inr > it.price_inr else None
         url = f"{base}/s/{shop.slug}/p/{it.id}"
         file_name = f"{it.id}.jpg"
         shutil.copyfile(it.image, img_dir / file_name)
@@ -174,6 +182,9 @@ def publish_items(shop: ShopInfo, items: list[ShopItem], out_dir: Path) -> Publi
                 sold_out=it.sold_out,
                 image_credit=it.image_credit,
                 image_credit_url=it.image_credit_url,
+                mrp_display=format_inr(mrp) if mrp else None,
+                section=it.section,
+                featured=it.featured,
                 colour=it.colour,
                 material=it.material,
                 pattern=it.pattern,
@@ -191,7 +202,8 @@ def publish_items(shop: ShopInfo, items: list[ShopItem], out_dir: Path) -> Publi
                 title=it.title_en,
                 description=it.description_en or it.title_en,
                 availability="out of stock" if it.sold_out else "in stock",
-                price_paise=paise,
+                price_paise=mrp or paise,
+                sale_price_paise=paise if mrp else None,
                 link=url,
                 image_link=f"{media}/{file_name}",
                 # The maker's brand when printed on the pack (Haldiram's, Pepsi), else the shop.

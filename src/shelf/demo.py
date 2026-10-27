@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from shelf.catalog.publish import publish_shop
 from shelf.config import Settings
 from shelf.core.ids import uuid7
-from shelf.db.models import FlagRow, Job, Product, Upload, User, Workspace
+from shelf.db.models import FlagRow, Job, Product, Section, Upload, User, Workspace
 from shelf.storage import LocalStorage
 
 _SKIP = {"id", "job_id", "workspace_id", "updated_at"}
@@ -54,9 +54,24 @@ def clone_template(
         ai_mark=template.ai_mark,
         raw_retention_days=template.raw_retention_days,
         consent_account_at=now,
+        address=template.address,
+        hours=template.hours,
+        delivery=template.delivery,
+        delivery_note=template.delivery_note,
+        min_order_inr=template.min_order_inr,
+        upi_id=template.upi_id,
+        about=template.about,
+        notice=template.notice,
     )
     db.add(ws)
     db.flush()
+    section_map: dict[object, object] = {}
+    for s in db.scalars(select(Section).where(Section.workspace_id == template.id)):
+        copy = Section(workspace_id=ws.id, name_en=s.name_en, name_hi=s.name_hi,
+                       position=s.position, category=s.category)  # fmt: skip
+        db.add(copy)
+        db.flush()
+        section_map[s.id] = copy.id
     jobs = db.scalars(
         select(Job)
         .where(Job.workspace_id == template.id, Job.status.in_(("needs_review", "published")))
@@ -88,6 +103,7 @@ def clone_template(
                 status=job.status,
                 stages=dict(job.stages),
                 cost_usd=job.cost_usd,
+                kind=job.kind,
                 work_key=work_key,
                 created_at=job.created_at,
             )
@@ -97,7 +113,11 @@ def clone_template(
             key = p.image_key
             if key and key.startswith(job.work_key + "/"):
                 key = work_key + key[len(job.work_key) :]
-            db.add(Product(**_copy_row(p, image_key=key), job_id=new_id, workspace_id=ws.id))
+            section = section_map.get(p.section_id)
+            db.add(
+                Product(**_copy_row(p, image_key=key, section_id=section),
+                        job_id=new_id, workspace_id=ws.id)
+            )  # fmt: skip
         for f in db.scalars(select(FlagRow).where(FlagRow.job_id == job.id)):
             db.add(FlagRow(**_copy_row(f), job_id=new_id, workspace_id=ws.id))
         db.flush()

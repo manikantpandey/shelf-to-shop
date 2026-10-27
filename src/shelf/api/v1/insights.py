@@ -75,6 +75,8 @@ def cut_frames(work: Path) -> dict[int, Path]:
 
 @router.get("/stats", tags=["insights"])
 def stats(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str, Any]:
+    from shelf.api.v1.shop import order_summary  # shop.py imports this module
+
     ws = seller.workspace
     today = shop_today()
     since = today - timedelta(days=DAYS - 1)
@@ -96,7 +98,7 @@ def stats(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str,
         key=lambda pair: pair[1],
         reverse=True,
     )[:5]
-    jobs = db.scalars(select(Job).where(Job.workspace_id == ws.id)).all()
+    jobs = db.scalars(select(Job).where(Job.workspace_id == ws.id, Job.kind == "video")).all()
     open_flags = db.scalar(
         select(func.count())
         .select_from(FlagRow)
@@ -128,6 +130,7 @@ def stats(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str,
         "spend_usd": str(sum((Decimal(j.cost_usd) for j in jobs), Decimal(0))),
         "shop_url": f"{settings.public_base_url}/s/{ws.slug}" if latest else None,
         "published_at": iso_utc(latest.created_at) if latest else None,
+        "orders": order_summary(db, ws),
     }
 
 
@@ -135,7 +138,7 @@ def stats(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str,
 def video_history(seller: SellerDep, db: SessionDep) -> dict[str, Any]:
     jobs = db.scalars(
         select(Job)
-        .where(Job.workspace_id == seller.workspace.id)
+        .where(Job.workspace_id == seller.workspace.id, Job.kind == "video")
         .order_by(Job.created_at.desc())
         .limit(50)
     ).all()

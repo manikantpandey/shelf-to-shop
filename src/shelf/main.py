@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shelf.api.v1 import health, insights, items, public, seller
+from shelf.api.v1 import health, insights, items, public, seller, shop
 from shelf.catalog.openfoodfacts import OpenFoodFacts
 from shelf.config import Settings, get_settings
 from shelf.core.errors import install_error_handlers
@@ -79,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(seller.router, prefix=API_PREFIX)
     app.include_router(items.router, prefix=API_PREFIX)
     app.include_router(insights.router, prefix=API_PREFIX)
+    app.include_router(shop.router, prefix=API_PREFIX)
     app.include_router(public.router, prefix=API_PREFIX)
 
     plugin = load_integration(app, settings)

@@ -36,6 +36,18 @@ class Workspace(IdMixin, TimestampMixin, Base):
     consent_recording_at: Mapped[datetime | None] = mapped_column(default=None)
     # The sample shop that demo sign-ins copy; nobody signs into it.
     is_template: Mapped[bool] = mapped_column(default=False)
+    # Shop profile, shown on the public shop page as soon as it is saved.
+    address: Mapped[str | None] = mapped_column(String(200), default=None)
+    hours: Mapped[str | None] = mapped_column(String(80), default=None)
+    delivery: Mapped[str] = mapped_column(String(10), default="pickup")  # pickup | delivery | both
+    delivery_note: Mapped[str | None] = mapped_column(String(120), default=None)
+    min_order_inr: Mapped[int | None] = mapped_column(default=None)
+    upi_id: Mapped[str | None] = mapped_column(String(100), default=None)
+    about: Mapped[str | None] = mapped_column(String(300), default=None)
+    notice: Mapped[str | None] = mapped_column(String(140), default=None)
+    logo_key: Mapped[str | None] = mapped_column(String(300), default=None)
+    # Last basket order number handed out (orders are numbered 1, 2, 3 per shop).
+    order_seq: Mapped[int] = mapped_column(default=0)
 
 
 class SessionRow(IdMixin, TimestampMixin, Base):
@@ -71,6 +83,8 @@ class Job(IdMixin, TimestampMixin, Base):
     # queued -> running -> needs_review -> published | failed
     status: Mapped[str] = mapped_column(String(20), default="queued")
     stages: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    # video: made from a recording | manual: holds the items a seller adds by hand
+    kind: Mapped[str] = mapped_column(String(10), default="video")
     error_code: Mapped[str | None] = mapped_column(String(40), default=None)
     error_message: Mapped[str | None] = mapped_column(Text, default=None)
     cost_usd: Mapped[str] = mapped_column(String(20), default="0")
@@ -108,6 +122,15 @@ class Product(IdMixin, TimestampMixin, Base):
     best_frame_s: Mapped[float | None] = mapped_column(default=None)
     sold_out: Mapped[bool] = mapped_column(default=False)
     removed: Mapped[bool] = mapped_column(default=False)
+    # Printed price; shown struck through when it is above the selling price.
+    mrp_inr: Mapped[int | None] = mapped_column(default=None)
+    # Pinned to the top of its section.
+    featured: Mapped[bool] = mapped_column(default=False)
+    # Kept, but not on the shop page or in the feed.
+    hidden: Mapped[bool] = mapped_column(default=False)
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sections.id", ondelete="SET NULL"), default=None
+    )
 
 
 class FlagRow(IdMixin, TimestampMixin, Base):
@@ -136,6 +159,43 @@ class Catalog(IdMixin, TimestampMixin, Base):
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSON)
     folder_key: Mapped[str] = mapped_column(String(300))
     approved_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+
+class Section(IdMixin, TimestampMixin, Base):
+    """A group of items on the shop page (Snacks, Cold drinks), in the seller's order."""
+
+    __tablename__ = "sections"
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), index=True
+    )
+    name_en: Mapped[str] = mapped_column(String(60))
+    name_hi: Mapped[str] = mapped_column(String(60))
+    position: Mapped[int] = mapped_column(default=0)
+    # The category this section was made from, so new items of that category land here.
+    category: Mapped[str | None] = mapped_column(String(40), default=None)
+
+
+class Order(IdMixin, TimestampMixin, Base):
+    """A basket a customer sent from the shop page, priced by us from the published shop."""
+
+    __tablename__ = "orders"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "number"),
+        Index("ix_orders_workspace_created", "workspace_id", "created_at"),
+    )
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"))
+    number: Mapped[int]
+    customer_name: Mapped[str | None] = mapped_column(String(60), default=None)
+    note: Mapped[str | None] = mapped_column(String(200), default=None)
+    # [{"id": public item id, "title": str, "qty": int, "price_inr": int}]
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    total_inr: Mapped[int] = mapped_column(default=0)
+    # new -> packed -> delivered | cancelled
+    status: Mapped[str] = mapped_column(String(12), default="new")
+    paid: Mapped[bool] = mapped_column(default=False)
+    lang: Mapped[str] = mapped_column(String(5), default="en")
 
 
 class ShopCounter(IdMixin, Base):

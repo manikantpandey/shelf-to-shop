@@ -8,16 +8,17 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from engine.media.transcode import frame_at
@@ -36,10 +37,12 @@ from shelf.catalog.openfoodfacts import (
     valid_barcode,
 )
 from shelf.catalog.publish import item_id, publish_shop
+from shelf.catalog.sections import category_for, ensure_sections
 from shelf.config import Settings
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
-from shelf.db.models import AuditEvent, FlagRow, Job, Product, Upload
+from shelf.core.ids import uuid7
+from shelf.db.models import AuditEvent, FlagRow, Job, Product, Section, Upload
 from shelf.jobs.service import TeeRunLog, providers_for
 from shelf.storage import LocalStorage
 
@@ -78,18 +81,24 @@ def _item(db: Session, seller: Seller, product_id: uuid.UUID) -> tuple[Product, 
 
 def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
     version = int(p.updated_at.timestamp())
+    on_shop = job.status == "published" and p.price_inr is not None and p.image_key is not None
     return {
         "id": str(p.id),
         "public_id": item_id(slug, p),
         "job_id": str(job.id),
+        "from_video": job.kind == "video",
         "idx": p.idx,
         "title_en": p.title_en,
         "title_hi": p.title_hi,
         "price_inr": p.price_inr,
         "price_display": format_inr(p.price_inr * 100) if p.price_inr is not None else None,
+        "mrp_inr": p.mrp_inr,
         "sold_out": p.sold_out,
-        # On the shop page: the video is published and the item has a price and a photo.
-        "live": job.status == "published" and p.price_inr is not None and p.image_key is not None,
+        "hidden": p.hidden,
+        "featured": p.featured,
+        "section_id": str(p.section_id) if p.section_id else None,
+        # On the shop page: published, priced, with a photo, and not hidden by the seller.
+        "live": on_shop and not p.hidden,
         "published": job.status == "published",
         "category": p.category,
         "brand": p.brand,
@@ -98,7 +107,7 @@ def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
         "image_source": p.image_source,
         "image_credit": p.image_credit,
         "ai_background": p.ai_background,
-        "added_at": iso_utc(job.created_at),
+        "added_at": iso_utc(p.created_at),
     }
 
 
@@ -112,25 +121,52 @@ def _refresh_shop(
 
 @router.get("/items")
 def list_items(seller: SellerDep, db: SessionDep) -> dict[str, Any]:
+    ensure_sections(db, seller.workspace)
     rows = db.execute(
         select(Product, Job)
         .join(Job, Job.id == Product.job_id)
+        .outerjoin(Section, Section.id == Product.section_id)
         .where(
             Product.workspace_id == seller.workspace.id,
             Product.removed.is_(False),
             Job.status.in_(SHOWN_STATUSES),
         )
-        .order_by(Job.created_at.desc(), Product.idx)
+        .order_by(Section.position, Product.featured.desc(), Job.created_at.desc(), Product.idx)
     ).all()
     return {"items": [item_out(p, j, seller.workspace.slug) for p, j in rows]}
+
+
+def _section(db: Session, seller: Seller, section_id: uuid.UUID | None) -> Section | None:
+    if section_id is None:
+        return None
+    found = db.scalar(
+        select(Section).where(Section.id == section_id, Section.workspace_id == seller.workspace.id)
+    )
+    if found is None:
+        raise AppError("not_found", "That section does not exist.", status=404)
+    return found
 
 
 class ItemPatch(BaseModel):
     title_en: str | None = Field(default=None, min_length=1, max_length=200)
     title_hi: str | None = Field(default=None, min_length=1, max_length=200)
     price_inr: int | None = Field(default=None, gt=0, le=10_000_000)
+    # 0 clears the MRP.
+    mrp_inr: int | None = Field(default=None, ge=0, le=10_000_000)
     sold_out: bool | None = None
+    hidden: bool | None = None
+    featured: bool | None = None
+    section_id: uuid.UUID | None = None
     removed: bool | None = None
+
+
+def _close_flags(db: Session, job: Job, p: Product) -> None:
+    for f in db.scalars(
+        select(FlagRow).where(
+            FlagRow.job_id == job.id, FlagRow.product_idx == p.idx, FlagRow.status == "open"
+        )
+    ):
+        f.status, f.resolution = "resolved", {"action": "removed"}
 
 
 @router.patch("/items/{product_id}")
@@ -149,20 +185,171 @@ def edit_item(
         p.title_hi = body.title_hi.strip()
     if body.price_inr is not None:
         p.price_inr, p.price_source, p.confidence = body.price_inr, "seller", 1.0
+    if body.mrp_inr is not None:
+        p.mrp_inr = body.mrp_inr or None
     if body.sold_out is not None:
         p.sold_out = body.sold_out
+    if body.hidden is not None:
+        p.hidden = body.hidden
+    if body.featured is not None:
+        p.featured = body.featured
+    section = _section(db, seller, body.section_id)
+    if section is not None:
+        p.section_id = section.id
     if body.removed is not None:
         p.removed = body.removed
         if body.removed:
-            for f in db.scalars(
-                select(FlagRow).where(
-                    FlagRow.job_id == job.id, FlagRow.product_idx == p.idx, FlagRow.status == "open"
-                )
-            ):
-                f.status, f.resolution = "resolved", {"action": "removed"}
+            _close_flags(db, job, p)
     db.flush()
     version = _refresh_shop(db, settings, _storage(request), seller, job)
     return {"item": item_out(p, job, seller.workspace.slug), "shop_version": version}
+
+
+BulkAction = Literal[
+    "sold_out", "in_stock", "hide", "show", "remove", "price_add", "price_percent", "section"
+]
+
+
+class Bulk(BaseModel):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    action: BulkAction
+    # Rupees for price_add, percent for price_percent; either may be negative.
+    value: int | None = Field(default=None, ge=-100_000, le=100_000)
+    section_id: uuid.UUID | None = None
+
+
+def _apply(db: Session, body: Bulk, p: Product, job: Job, target: Section | None) -> None:
+    if body.action in ("sold_out", "in_stock"):
+        p.sold_out = body.action == "sold_out"
+    elif body.action in ("hide", "show"):
+        p.hidden = body.action == "hide"
+    elif body.action == "remove":
+        p.removed = True
+        _close_flags(db, job, p)
+    elif body.action == "section" and target is not None:
+        p.section_id = target.id
+    elif p.price_inr is not None and body.value:
+        if body.action == "price_add":
+            new = p.price_inr + body.value
+        else:
+            new = round(p.price_inr * (100 + body.value) / 100)
+        p.price_inr, p.price_source, p.confidence = max(1, new), "seller", 1.0
+
+
+@router.post("/items/bulk")
+def bulk_edit(
+    body: Bulk, request: Request, seller: SellerDep, db: SessionDep, settings: SettingsDep
+) -> dict[str, Any]:
+    """Change many items at once (sold out, prices, section...), then republish the shop once."""
+    rows = db.execute(
+        select(Product, Job)
+        .join(Job, Job.id == Product.job_id)
+        .where(
+            Product.id.in_(body.ids),
+            Product.workspace_id == seller.workspace.id,
+            Job.workspace_id == seller.workspace.id,
+        )
+    ).all()
+    if len(rows) != len(set(body.ids)):
+        raise AppError("not_found", "Some of those items do not exist.", status=404)
+    if body.action in ("price_add", "price_percent") and not body.value:
+        raise AppError("value_required", "Enter how much to change the price by.", status=422)
+    target = _section(db, seller, body.section_id) if body.action == "section" else None
+    if body.action == "section" and target is None:
+        raise AppError("pick_section", "Pick a section.", status=422)
+    for p, job in rows:
+        _apply(db, body, p, job, target)
+    db.add(
+        AuditEvent(
+            workspace_id=seller.workspace.id,
+            actor=f"user:{seller.user.id}",
+            action="items.bulk_edit",
+            meta={"action": body.action, "items": len(rows)},
+        )
+    )
+    db.flush()
+    version = None
+    if any(job.status == "published" for _, job in rows):
+        shop = publish_shop(db, settings, _storage(request), seller.workspace, seller.user)
+        version = shop.version
+    return {
+        "items": [item_out(p, job, seller.workspace.slug) for p, job in rows],
+        "shop_version": version,
+    }
+
+
+def manual_job(db: Session, seller: Seller) -> Job:
+    """The workspace's holder for items added by hand (no video); created the first time."""
+    found = db.scalar(
+        select(Job).where(Job.workspace_id == seller.workspace.id, Job.kind == "manual")
+    )
+    if found is not None:
+        return found
+    upload = Upload(
+        workspace_id=seller.workspace.id,
+        storage_key=f"ws/{seller.workspace.id}/uploads/manual.none",
+        size_bytes=0,
+        sha256="",
+        container="none",
+        duration_s=0.0,
+        deleted_at=datetime.now(UTC),
+    )
+    db.add(upload)
+    db.flush()
+    job_id = uuid7()
+    job = Job(
+        id=job_id,
+        workspace_id=seller.workspace.id,
+        upload_id=upload.id,
+        kind="manual",
+        status="published",
+        stages={},
+        work_key=f"ws/{seller.workspace.id}/jobs/{job_id}",
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+class NewItem(BaseModel):
+    title_en: str = Field(min_length=1, max_length=200)
+    title_hi: str | None = Field(default=None, max_length=200)
+    price_inr: int = Field(gt=0, le=10_000_000)
+    mrp_inr: int | None = Field(default=None, gt=0, le=10_000_000)
+    section_id: uuid.UUID | None = None
+
+
+@router.post("/items", status_code=201)
+def add_item(body: NewItem, seller: SellerDep, db: SessionDep) -> dict[str, Any]:
+    """Add one item by hand. It goes on the shop once it has a photo."""
+    section = _section(db, seller, body.section_id)
+    job = manual_job(db, seller)
+    idx = (db.scalar(select(func.max(Product.idx)).where(Product.job_id == job.id)) or 0) + 1
+    title_en = body.title_en.strip()
+    p = Product(
+        job_id=job.id,
+        workspace_id=seller.workspace.id,
+        idx=idx,
+        title_en=title_en,
+        title_hi=(body.title_hi or "").strip() or title_en,
+        price_inr=body.price_inr,
+        price_source="seller",
+        confidence=1.0,
+        mrp_inr=body.mrp_inr,
+        category=category_for(section),
+        section_id=section.id if section else None,
+        image_source="upload",
+    )
+    db.add(p)
+    db.add(
+        AuditEvent(
+            workspace_id=seller.workspace.id,
+            actor=f"user:{seller.user.id}",
+            action="item.added",
+        )
+    )
+    db.flush()
+    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": None}
 
 
 def _photo_key(job: Job, p: Product, kind: str) -> str:

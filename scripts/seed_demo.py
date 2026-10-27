@@ -43,6 +43,12 @@ def main() -> int:
     ap.add_argument("--whatsapp", required=True, help="number that 'Order on WhatsApp' opens")
     ap.add_argument("--publish", type=int, default=None, help="how many videos to publish")
     ap.add_argument("--reset", action="store_true", help="delete the previous sample shop")
+    ap.add_argument("--hours", help="opening hours, e.g. '8 am to 10 pm'")
+    ap.add_argument("--delivery", choices=["pickup", "delivery", "both"], default="pickup")
+    ap.add_argument("--delivery-note", help="e.g. 'Free home delivery within 2 km'")
+    ap.add_argument("--min-order", type=int, help="minimum order for delivery, in rupees")
+    ap.add_argument("--about", help="one or two lines about the shop")
+    ap.add_argument("--notice", help="offer strip on the shop page")
     args = ap.parse_args()
 
     settings = get_settings()
@@ -76,6 +82,12 @@ def main() -> int:
             is_template=True,
             consent_account_at=now,
             consent_recording_at=now,
+            hours=args.hours,
+            delivery=args.delivery,
+            delivery_note=args.delivery_note,
+            min_order_inr=args.min_order,
+            about=args.about,
+            notice=args.notice,
         )
         db.add(template)
         db.flush()

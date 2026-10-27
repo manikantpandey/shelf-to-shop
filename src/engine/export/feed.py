@@ -24,6 +24,7 @@ FEED_COLUMNS = [
     "availability",
     "condition",
     "price",
+    "sale_price",
     "link",
     "image_link",
     "brand",
@@ -45,6 +46,8 @@ class FeedItem(BaseModel):
     title: str
     description: str
     price_paise: int
+    # The discounted price when the item sells below its printed price (then `price` is the MRP).
+    sale_price_paise: int | None = None
     link: str
     image_link: str
     brand: str
@@ -101,6 +104,8 @@ def validate_item(item: FeedItem) -> list[FeedIssue]:
         err("description", "description must not be all capital letters")
     if item.price_paise <= 0:
         err("price", "price must be more than zero")
+    if item.sale_price_paise is not None and not 0 < item.sale_price_paise < item.price_paise:
+        err("sale_price", "sale_price must be more than zero and below price")
     if not _url_ok(item.link):
         err("link", "link must be a valid https URL")
     if not _url_ok(item.image_link) or not _IMAGE.search(item.image_link):
@@ -147,6 +152,7 @@ def build_feed_csv(items: list[FeedItem]) -> tuple[str, list[FeedIssue]]:
                 item.availability,
                 item.condition,
                 feed_price(item.price_paise),
+                "" if item.sale_price_paise is None else feed_price(item.sale_price_paise),
                 item.link,
                 item.image_link,
                 item.brand,
