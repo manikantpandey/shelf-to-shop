@@ -9,11 +9,13 @@ spans our pause detector found inside the turn (monotonic DP on speaking-rate co
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from engine.pipeline.schemas import TimedChunk, TimedMention
 from engine.prices.hinglish import find_prices, likely_prices
 
 # ASR output mixes scripts, so split on Latin, fullwidth, CJK and Devanagari (danda) punctuation.
+SPECIAL_TOKEN = re.compile(r"<\|[^|>]{0,40}\|>")  # e.g. <|speaker_A|> leaking into text
 CHUNK_SPLIT = re.compile(r"[,，、。।.!?;:]+")  # noqa: RUF001
 Span = tuple[float, float]
 
@@ -79,13 +81,14 @@ def _speech_time(spans: list[Span], frac: float) -> float:
 
 def place_turns(
     turns: list[tuple[float, float, str]], speech_spans: list[Span]
-) -> tuple[list[TimedChunk], list[TimedMention], str]:
+) -> tuple[list[TimedChunk], list[TimedMention], Literal["aligned", "interpolated", "none"]]:
     """Chunks and price mentions with times. Returns (chunks, mentions, timing method)."""
     chunks: list[TimedChunk] = []
     mentions: list[TimedMention] = []
     methods: set[str] = set()
     for turn_no, (start, end, text) in enumerate(turns):
         inside = spans_within(speech_spans, start, end) or [(start, end)]
+        text = SPECIAL_TOKEN.sub(" ", text)
         pieces = [p for p in CHUNK_SPLIT.split(text) if p.strip()]
         aligned = align_chunks(pieces, inside)
         if aligned is not None:
@@ -116,5 +119,6 @@ def place_turns(
                         confidence=m.confidence,
                     )
                 )
-    timing = "aligned" if methods == {"aligned"} else ("interpolated" if methods else "none")
-    return chunks, mentions, timing
+    if methods == {"aligned"}:
+        return chunks, mentions, "aligned"
+    return chunks, mentions, "interpolated" if methods else "none"

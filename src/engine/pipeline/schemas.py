@@ -82,6 +82,7 @@ FlagKind = Literal[
     "price_conflict",
     "ambiguous_price",
     "implausible_price",
+    "uncertain_price",
     "duplicate",
     "low_conf_mask",
 ]

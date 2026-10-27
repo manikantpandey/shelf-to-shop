@@ -50,9 +50,14 @@ class PriceMention:
     source: Literal["digits", "words", "mixed"]
     colloquial: bool
     currency_cue: bool
+    # A bare "hazaar"/"sau" right after an unknown word ("देव हजार") is usually a misheard
+    # count ("dedh hazaar"), so the value is a guess.
+    uncertain: bool = False
 
     @property
     def confidence(self) -> float:
+        if self.uncertain:
+            return 0.5
         if self.colloquial:
             return 0.6
         if self.currency_cue or self.source == "digits":
@@ -204,8 +209,11 @@ def find_prices(text: str) -> list[PriceMention]:
         else:
             source = "words"
         start, end = span[0].start, span[-1].end
+        uncertain = span[0].kind == "mult" and before is not None and before.kind == "other"
         mentions.append(
-            PriceMention(int(value), start, end, text[start:end], source, colloquial, cue)
+            PriceMention(
+                int(value), start, end, text[start:end], source, colloquial, cue, uncertain
+            )
         )
         i = j
     return mentions

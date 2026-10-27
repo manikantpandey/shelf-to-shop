@@ -63,6 +63,13 @@ def test_colloquial_pairs_are_flagged() -> None:
     assert m.value == 850
 
 
+def test_bare_multiplier_after_unknown_word_is_uncertain() -> None:
+    [m] = find_prices("पीच वाला पीला देव हजार")  # ASR for "peeche wala peela, dedh hazaar"
+    assert (m.value, m.uncertain, m.confidence) == (1000, True, 0.5)
+    [m] = find_prices("sau rupaye")
+    assert not m.uncertain
+
+
 def test_fraction_alone_is_not_a_price() -> None:
     assert find_prices("dedh") == []
     assert find_prices("saadhe aath baje") == []

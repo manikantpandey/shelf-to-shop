@@ -189,3 +189,20 @@ def test_duplicates_and_weak_masks_are_flagged(tmp_path: object) -> None:
                  coverage=0.3, method="point")  # fmt: skip
     flags = verify(prods, [], [cut], [])
     assert {f.kind for f in flags} == {"duplicate", "low_conf_mask"}
+
+
+def test_context_crosses_turns_when_phrases_are_close() -> None:
+    # Real run: the ASR made every phrase its own turn, and "agla hara wala" was lost.
+    tr = Transcript(
+        text="x",
+        chunks=[
+            TimedChunk(start_s=9.2, end_s=10.3, text="सादे आठ सौ", turn=3),
+            TimedChunk(start_s=10.72, end_s=11.9, text="अगला हरा वाला", turn=4),
+        ],
+        mentions=[
+            TimedMention(value_inr=850, t_s=9.2, words="सादे आठ सौ", chunk=0, confidence=0.85)
+        ],
+    )
+    prods = [_plain(2, 4.6, 11.0, "red"), _plain(3, 11.1, 15.5, "green")]
+    result = match_prices(prods, tr)
+    assert {d.product_idx: d.price_inr for d in result.decisions} == {2: None, 3: 850}

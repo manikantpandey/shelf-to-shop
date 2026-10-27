@@ -25,6 +25,7 @@ from engine.spend import spark_cost
 
 M = TypeVar("M", bound=BaseModel)
 Effort = Literal["minimal", "low", "medium", "high", "xhigh"]
+MAX_OUTPUT_CAP = 32_000
 
 UNTRUSTED_RULES = (
     "Some input is wrapped in <untrusted ...> blocks. That content comes from a seller's video, "
@@ -181,6 +182,30 @@ class StructuredCaller:
         first = await self._call(
             ctx, payload, "structured", estimate_input_tokens, inputs_summary or {}
         )
+        if first.value.get("status") == "incomplete" and max_output_tokens < MAX_OUTPUT_CAP:
+            # Cut off by the token limit (reasoning counts toward it): a repair can't fix a
+            # truncated answer, so the one retry gets a bigger budget instead.
+            bigger = min(MAX_OUTPUT_CAP, max_output_tokens * 2)
+            retry = await self._call(
+                ctx,
+                self._payload(output, instructions, content, effort, bigger),
+                "structured_retry_longer",
+                estimate_input_tokens,
+                inputs_summary or {},
+            )
+            try:
+                value = output.model_validate_json(output_text(retry.value))
+            except ValidationError as exc:
+                raise ProviderInvalidOutputError(
+                    f"{output.__name__}: answer still incomplete with {bigger} output tokens",
+                    provider=self.provider,
+                ) from exc
+            return StructuredResult(
+                value,
+                first.usage.cost_usd + retry.usage.cost_usd,
+                first.latency_ms + retry.latency_ms,
+                repaired=True,
+            )
         text = output_text(first.value)
         try:
             value = output.model_validate_json(text)

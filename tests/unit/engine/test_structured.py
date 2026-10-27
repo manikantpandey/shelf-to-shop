@@ -186,3 +186,21 @@ async def test_spend_cap_stops_call_before_sending() -> None:
         )
     assert seen == []
     assert log.entries == []
+
+
+async def test_truncated_answer_is_retried_with_a_bigger_budget() -> None:
+    seen: list[dict[str, Any]] = []
+    truncated = {**_body('{"items": [{"title": "Blue'), "status": "incomplete"}
+    caller = _caller([truncated, _body(json.dumps(VALID))], seen)
+    ctx, log, _ = _ctx()
+    result = await caller.run(
+        ctx,
+        output=Listing,
+        instructions="List items.",
+        content=[{"type": "input_text", "text": "x"}],
+        estimate_input_tokens=200,
+        max_output_tokens=1000,
+    )
+    assert result.repaired is True
+    assert [s["max_output_tokens"] for s in seen] == [1000, 2000]
+    assert [e.operation for e in log.entries] == ["structured", "structured_retry_longer"]

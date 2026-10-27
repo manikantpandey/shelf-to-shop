@@ -51,13 +51,30 @@ class Context:
     points_back: bool
 
 
+CONTEXT_GAP_S = 2.0  # neighbouring phrases closer than this count as the same remark
+# Phrases that start a new item: 'ye ...', 'aur ye ...', 'this ...'.
+_NEW_ITEM = re.compile(r"(?i)^(?:aur\s+|and\s+)?(?:ye|yeh|yah|this)\b|^(?:और\s+)?(?:ये|यह)(?:\s|$)")
+
+
 def context_of(transcript: Transcript, mention: TimedMention) -> Context:
-    here = transcript.chunks[mention.chunk]
-    text = " ".join(
-        c.text
-        for i, c in enumerate(transcript.chunks)
-        if abs(i - mention.chunk) <= 1 and c.turn == here.turn
-    )
+    """The price's phrase plus the phrase before and after it, if spoken close in time.
+
+    Turn boundaries are not used: the ASR sometimes makes every short phrase its own turn.
+    """
+    chunks = transcript.chunks
+    k = mention.chunk
+    parts = [chunks[k].text]
+    if k > 0 and chunks[k].start_s - chunks[k - 1].end_s <= CONTEXT_GAP_S:
+        parts.insert(0, chunks[k - 1].text)
+    # The next phrase usually describes the next item ("... dedh hazaar. aur ye gulabi wala"),
+    # so it only counts when it doesn't open a new item.
+    if (
+        k + 1 < len(chunks)
+        and chunks[k + 1].start_s - chunks[k].end_s <= CONTEXT_GAP_S
+        and not _NEW_ITEM.match(chunks[k + 1].text.strip())
+    ):
+        parts.append(chunks[k + 1].text)
+    text = " ".join(parts)
     return Context(colours_in(text), bool(_NEXT.search(text)), bool(_PREVIOUS.search(text)))
 
 
@@ -66,7 +83,8 @@ def score(mention: TimedMention, product: DetectedProduct, ctx: Context) -> floa
     s = time_affinity(t, product)
     if s <= 0:
         return 0.0
-    if ctx.colours & colours_in(f"{product.colour} {product.description}"):
+    # Colour comes from the product photo (enrichment) when available, not the detector text.
+    if ctx.colours & colours_in(product.colour):
         s += COLOUR_WEIGHT
     if (ctx.points_next and product.first_seen_s > t) or (
         ctx.points_back and product.last_seen_s < t
@@ -142,6 +160,16 @@ def _decide(
         else:
             confidence = 0.5
             flags.append(_conflict(product.idx, "vision", [price, vision]))
+        if top.confidence < 0.6 and vision != price:
+            flags.append(
+                Flag(
+                    kind="uncertain_price",
+                    product_idx=product.idx,
+                    question_key="flag.uncertain_price",
+                    params={"price": price, "heard": top.words},
+                    options=[price] + ([vision] if vision is not None else []),
+                )
+            )
         others = sorted({m.value_inr for _, m in heard} - {price})
         if others:
             flags.append(_conflict(product.idx, "multiple", [price, *others]))
