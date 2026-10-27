@@ -61,9 +61,17 @@ stays local (now gitignored); clips, Baseten key and phone results promised toni
 3. VPS deploy: docker-compose (api, worker, Postgres) + Caddy + R2; you'll need to create the VM and
    R2 bucket and give me SSH access or run the commands I prepare.
 
+### Decided after the session
+- VPS: DigitalOcean Bangalore (BLR1), 2 vCPU / 4 GB. HTTPS on your own domain (you add an A record).
+- Setup: I write `deploy/` (docker-compose, Caddyfile, bootstrap script, runbook); you create the
+  droplet and run it over SSH. No server credentials are shared.
+- Feed test: I prepare the CSV and a Commerce Manager click-path; you upload and paste back the result.
+  The feed's `image_link` and `link` must be publicly reachable on your domain, so the real upload
+  test happens right after the deploy is up (images served from R2 or the VPS).
+
 ### Open questions
-1. Commerce Manager access for the Day 3 feed upload test (tomorrow).
-2. VPS provider/region and domain name for HTTPS.
+1. Which domain/subdomain to use (e.g. `shop.<yourdomain>`), so `PUBLIC_BASE_URL` and the feed links
+   can be set.
 
 ---
 
