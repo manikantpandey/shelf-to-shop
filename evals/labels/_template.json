@@ -1,0 +1,24 @@
+{
+  "video": "clip_a.mp4",
+  "consent": "own stock, no people in frame",
+  "language_notes": "Hinglish, prices said in digits and Hindi words",
+  "products": [
+    {
+      "n": 1,
+      "what": "blue cotton saree, gold border",
+      "appears_s": [2.0, 6.5],
+      "spoken_price_inr": 1200,
+      "spoken_at_s": 4.0,
+      "spoken_words": "ye neela wala 1200",
+      "tag_price_inr": null,
+      "notes": ""
+    }
+  ],
+  "seeded_errors": [
+    {
+      "kind": "price_conflict",
+      "product_n": 1,
+      "notes": "tag says 1100, I said 1200"
+    }
+  ]
+}
