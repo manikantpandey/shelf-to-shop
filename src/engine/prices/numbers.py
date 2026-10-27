@@ -170,7 +170,10 @@ MULTIPLIERS: dict[str, int] = {
 # Fraction words. "plus": added to the count that follows ("saadhe aath sau" = 8.5 x 100).
 # "value": the whole count ("dedh hazaar" = 1.5 x 1000). "sava" works both ways.
 FRACTIONS: dict[str, tuple[str, float]] = {
-    **dict.fromkeys(("saadhe", "sade", "saade", "sadhe", "saadhey", "साढ़े", "साढे"), ("plus", 0.5)),
+    # "सादे"/"साडे" are common ASR spellings of साढ़े; a fraction only counts before a number.
+    **dict.fromkeys(
+        ("saadhe", "sade", "saade", "sadhe", "saadhey", "साढ़े", "साढे", "सादे", "साडे"), ("plus", 0.5)
+    ),
     **dict.fromkeys(("paune", "pone", "paun", "पौने"), ("plus", -0.25)),
     **dict.fromkeys(("sava", "savaa", "sawa", "sawaa", "सवा"), ("sava", 0.25)),
     **dict.fromkeys(("dedh", "derh", "dedhh", "डेढ़", "डेढ"), ("value", 1.5)),

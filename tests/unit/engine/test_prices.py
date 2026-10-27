@@ -41,6 +41,8 @@ def values(text: str) -> list[int]:
         ("एक हजार दो सौ", [1200]),
         ("एक हज़ार दो सौ", [1200]),  # nukta variant
         ("साढ़े तीन हज़ार", [3500]),
+        ("सादे आठ सौ", [850]),  # common ASR spelling of साढ़े
+        ("ये सादे वाले", []),  # plain "सादे" (plain ones) is not a number
         ("पाँच सौ", [500]),
         ("पांच सौ", [500]),  # anusvara variant
         ("twelve hundred", [1200]),
