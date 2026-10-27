@@ -12,10 +12,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from engine.config import EngineConfig, ModelIds, SpendCaps
 
 AppMode = Literal["standalone", "socialpulse"]
-Environment = Literal["dev", "test", "prod"]
+# demo: production security settings, but demo login allowed and a visible banner (hackathon).
+Environment = Literal["dev", "test", "demo", "prod"]
 
 # Integration plugins are loaded by module path, so the core never imports them statically.
 INTEGRATION_PLUGINS: dict[str, str] = {"socialpulse": "integrations.socialpulse.plugin"}
+DEV_SECRET = "dev-only-secret-do-not-use-outside-your-laptop"  # noqa: S105  (refused outside dev/test)
 
 
 class Settings(BaseSettings):
@@ -29,8 +31,19 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:5173"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
-    # Development-only shortcut for the Day 4 demo; refused in production.
+    # Shortcut sign-in for dev and the hackathon demo; refused when ENVIRONMENT=prod.
     demo_login_enabled: bool = False
+
+    # Where uploads, job work files and published media live (local disk in dev).
+    storage_dir: str = "./storage"
+    # Run queued jobs inside the API process (dev convenience; production runs a worker).
+    worker_inline: bool = False
+    # Session cookie lifetime.
+    session_hours: int = 24 * 14
+    # Server secret for hashing session tokens; must be set (32+ chars) outside dev and test.
+    secret_key: SecretStr = SecretStr(DEV_SECRET)
+    # Labelled clip the fake providers replay (PROVIDERS=fake).
+    fake_scenario: str = "evals/labels/synth_a.json"
 
     providers: Literal["meta", "fake"] = "meta"
     text_llm_provider: Literal["meta", "baseten"] = "meta"
@@ -50,6 +63,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def check_production_safety(self) -> Settings:
+        if self.environment in ("demo", "prod"):
+            if not self.public_base_url.startswith("https://"):
+                raise ValueError("PUBLIC_BASE_URL must be https outside dev and test")
+            key = self.secret_key.get_secret_value()
+            if key == DEV_SECRET or len(key) < 32:
+                raise ValueError("SECRET_KEY must be set to 32+ random characters")
         if self.environment == "prod":
             if self.demo_login_enabled:
                 raise ValueError("DEMO_LOGIN_ENABLED must be false in production")
@@ -58,6 +77,10 @@ class Settings(BaseSettings):
         if self.demo_login_enabled and self.app_mode != "standalone":
             raise ValueError("demo login is only available in standalone mode")
         return self
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.environment in ("demo", "prod")
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(

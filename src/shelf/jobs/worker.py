@@ -10,7 +10,6 @@ import random
 import signal
 import socket
 import threading
-import time
 from collections.abc import Callable
 from typing import Any
 
@@ -82,15 +81,28 @@ class Worker:
 
 
 def main() -> None:
+    from pathlib import Path
+
+    from shelf.jobs.service import PIPELINE_TASK, run_pipeline_job
+    from shelf.storage import LocalStorage
+
     settings = get_settings()
     configure_logging(settings.log_level)
     factory = make_session_factory(make_engine(settings.database_url))
-    worker = Worker(factory, handlers={})  # pipeline handlers are registered on Day 3
+    storage = LocalStorage(Path(settings.storage_dir))
+    worker = Worker(
+        factory,
+        handlers={
+            PIPELINE_TASK: lambda task: run_pipeline_job(
+                factory, settings, storage, task.payload["job_id"]
+            )
+        },
+        lease_s=900,  # a pipeline run takes a few minutes
+    )
     signal.signal(signal.SIGINT, worker.stop)
     signal.signal(signal.SIGTERM, worker.stop)
     log.info("worker_started", worker_id=worker.worker_id)
     worker.run_forever()
-    time.sleep(0)
 
 
 if __name__ == "__main__":

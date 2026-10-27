@@ -23,14 +23,26 @@ def test_contributor_models_refused_via_settings() -> None:
         _settings(meta_vision_model="muse-spark-1.2-contributor").engine_config()
 
 
+LIVE = {"public_base_url": "https://shop.shankhyaai.com", "secret_key": "x" * 40}
+
+
 def test_demo_login_refused_in_production() -> None:
     with pytest.raises(ValidationError, match="DEMO_LOGIN_ENABLED"):
-        _settings(environment="prod", demo_login_enabled=True)
+        _settings(environment="prod", demo_login_enabled=True, **LIVE)
 
 
 def test_fake_providers_refused_in_production() -> None:
     with pytest.raises(ValidationError, match="PROVIDERS=fake"):
-        _settings(environment="prod", providers="fake")
+        _settings(environment="prod", providers="fake", **LIVE)
+
+
+def test_demo_environment_allows_demo_login_with_live_safeguards() -> None:
+    s = _settings(environment="demo", demo_login_enabled=True, **LIVE)
+    assert s.secure_cookies
+    with pytest.raises(ValidationError, match="https"):
+        _settings(environment="demo", public_base_url="http://shop.example", secret_key="x" * 40)
+    with pytest.raises(ValidationError, match="SECRET_KEY"):
+        _settings(environment="demo", public_base_url="https://shop.example")
 
 
 def test_demo_login_only_in_standalone() -> None:
