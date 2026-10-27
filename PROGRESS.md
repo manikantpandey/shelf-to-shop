@@ -16,8 +16,62 @@ Updated at the end of every session. Newest session first.
 | 9 | Nov 4 | README with eval table, final fixes, freeze 4 PM IST |
 
 Working rules: small conventional commits, authored by the configured git user only, with no AI attribution
-trailers (a commit-msg hook strips them). Never push without asking. Secrets only in `.env`. No parallel
-worktree agents for engine/shelf/web code.
+trailers (a commit-msg hook strips them). Push `main` at the end of each day after tests and a
+full-history gitleaks scan pass; never force-push. Secrets only in `.env`. No parallel worktree agents
+for engine/shelf/web code.
+
+---
+
+## Session 5: Oct 27 late (Day 4 web slice and deploy kit, pulled forward)
+
+### Done
+- Segment tries nearby frames when a cut-out is weak; your confirmed prices saved as eval labels for
+  the three kirana clips (`evals/labels/real_kirana_{a,b,c}.json`).
+- **Seller backend** (`src/shelf/api/v1/seller.py`): flag-gated demo sign-in, cookie sessions with
+  double-submit CSRF, shop setup, recording consent, uploads (200 MB, magic-byte sniff, ffprobe), jobs
+  on the DB queue running the engine `Pipeline`, review edits and flag answers (set price / dismiss /
+  remove item), publish (needs a WhatsApp number and no open questions; versioned public folder),
+  feed CSV and photo zip downloads, public shop and media endpoints with path guards. An intruder
+  workspace gets 404 on every job, review, image and catalog endpoint (test).
+- Feed problems now leave the item out of the feed only; the shop page still publishes and the
+  Catalog screen says which items were left out.
+- **Web app** (`web/`): sign in, shop setup, consent, recorder (rear camera, MP4/WebM pick, 60 s
+  countdown, mic meter, torch, gallery fallback, permission / no-camera / insecure-context screens),
+  processing, review with yellow price tags, catalog, settings, public shop page in English and Hindi.
+  12 screenshots at 360×800 critiqued and fixed (`docs/screenshots/`).
+- Playwright journey with fake providers: sign in → record → process → fix prices → publish → public
+  page in en/hi with wa.me links and loaded photos. CI runs it, plus a web job and cfn-lint.
+- **Deploy kit** (`deploy/`): CloudFormation (EC2 t3.medium in Mumbai, IMDSv2, encrypted disk, ports
+  80/443 only, Session Manager instead of SSH, read access to `/shelf-to-shop/*` parameters only,
+  Elastic IP), Docker images, Caddy (automatic HTTPS, CSP without unsafe-inline, HSTS, camera and
+  mic for our origin only), prod and dev compose files, bootstrap and update scripts. Verified
+  locally: images build, Caddyfile valid, cfn-lint clean, dev compose on Postgres ran the migrations
+  and a fake job to review.
+- `docs/runbook.md` (deploy, operate, rotate keys, incidents, teardown) and `make dev`.
+
+### Broken / risks
+- Not deployed yet: needs your AWS steps (runbook section 1).
+- R2 not built: published photos are served by the API from the machine's disk (fine for the demo).
+- Daily spend caps are not enforced across jobs yet (per-job cap only) until the DB spend ledger.
+- Uploads are one request (not resumable) and the recording is not kept in IndexedDB; no recorder
+  component tests yet; no rate limits; email-code sign-in has no sender (demo uses demo sign-in).
+- Retention sweeper and data export/delete not built.
+- Commerce Manager `link` domain question still open (test after deploy).
+
+### Test results
+- `make check`: ruff, mypy strict, import-linter 2/2, pytest **192 passed**.
+- Web: vitest 7 passed, `tsc -b` clean, production build OK. Playwright journey **1 passed**.
+- gitleaks full history (38 commits): no leaks. `claude.md` and `.env` untracked.
+
+### Next 3 tasks
+1. You deploy (runbook section 1); then I prepare the Commerce Manager feed test and click-path.
+2. Day 5 hardening: rate and size limits, resumable chunked uploads + IndexedDB keep, refresh-token
+   rotation, audit coverage, recorder component tests.
+3. DB spend ledger for daily caps; R2 storage for published photos; retention sweeper.
+
+### Needed from you
+- AWS: create the Parameter Store secrets and the CloudFormation stack, then the GoDaddy `shop` record.
+- Baseten key; spike 5 phone results; original-quality clips when you reshoot.
 
 ---
 

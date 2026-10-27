@@ -57,8 +57,11 @@ Logs are JSON with a `request_id` on every line; the same id is in the `x-reques
 in error responses, so a seller's error message can be traced to its log lines.
 
 Spend: each job's model cost is stored on the job (`jobs.cost_usd`) and every model call is in the job's
-`runlog.jsonl`. Per-job and per-day caps come from `SPEND_CAP_*` settings (defaults $0.50 / job,
-$3 / workspace / day, $25 / instance / day).
+`runlog.jsonl`. The per-job cap (`SPEND_CAP_PER_JOB_USD`, default $0.50) stops a job before the call that
+would cross it. The daily caps (`SPEND_CAP_PER_WORKSPACE_DAY_USD` $3, `SPEND_CAP_PER_INSTANCE_DAY_USD` $25)
+are not enforced across jobs yet (they need the database spend ledger); until then, watch daily usage in
+the Meta dashboard, or in the Postgres shell:
+`select date(created_at), sum(cast(cost_usd as numeric)) from jobs group by 1 order by 1;`
 
 ## 3. Rotating keys
 
