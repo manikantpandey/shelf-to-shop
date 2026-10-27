@@ -37,7 +37,7 @@ test("seller records, fixes prices, publishes, edits an item; buyer sends a bask
   await page.getByRole("button", { name: "₹850", exact: true }).click();
   await expect(page.getByText(/you said ₹850/)).toHaveCount(0);
   const missing = page.getByRole("article").filter({ hasText: "No price heard" });
-  await missing.getByPlaceholder("Other price").fill("650");
+  await missing.getByPlaceholder("Price (₹)").fill("650");
   await missing.getByRole("button", { name: "Set price" }).click();
   await expect(page.getByText("Everything looks right.")).toBeVisible();
   await page.getByRole("button", { name: "Publish" }).click();

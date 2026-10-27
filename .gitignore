@@ -58,3 +58,6 @@ Thumbs.db
 claude.md
 CLAUDE.md
 *.tsbuildinfo
+
+# Local test-drive scripts (may reference private videos)
+web/e2e/_*.mjs

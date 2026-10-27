@@ -8,7 +8,7 @@ import { useSession } from "../session";
 import { LanguageButton } from "../Shell";
 
 export function SignIn() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { refresh } = useSession();
   const [name, setName] = useState("");
@@ -19,7 +19,10 @@ export function SignIn() {
     setBusy(kind);
     setError("");
     try {
-      const res = await api<{ workspace: Workspace; csrf_token: string }>("/api/v1/auth/demo", { method: "POST", json: body });
+      const res = await api<{ workspace: Workspace; csrf_token: string }>("/api/v1/auth/demo", {
+        method: "POST",
+        json: { ...body, language: i18n.language === "hi" ? "hi" : "en" },
+      });
       setCsrf(res.csrf_token);
       await refresh();
       navigate(kind === "sample" ? "/home" : "/setup");

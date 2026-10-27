@@ -161,7 +161,8 @@ function BasketSheet({ shop, basket, setQty, clear, onClose, hindi }: {
       clear();
       window.location.assign(res.whatsapp_url);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 409 ? err.message : t("app.offline"));
+      // Refusals (sold out, item gone, too many orders) carry their own plain message.
+      setError(err instanceof ApiError && err.status >= 400 && err.status < 500 ? err.message : t("app.offline"));
     } finally {
       setBusy(false);
     }

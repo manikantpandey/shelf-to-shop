@@ -2,24 +2,36 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { api, apiUrl, ApiError, type Flag, type Review as ReviewData, type ReviewProduct } from "../api";
+import { api, apiUrl, ApiError, type Flag, type Item, type Review as ReviewData, type ReviewProduct, type ShopSection } from "../api";
 import { Icon } from "../components/Icon";
 import { PriceTag } from "../components/PriceTag";
 import { formatINR } from "../format";
 import { Shell } from "../Shell";
+import { ItemSheet } from "./ItemSheet";
+
+const PRICE_KINDS = new Set(["missing_price", "price_conflict", "ambiguous_price", "implausible_price", "uncertain_price"]);
 
 export function Review() {
   const { t, i18n } = useTranslation();
   const { jobId = "" } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState<ReviewData | null>(null);
-  const [editing, setEditing] = useState<ReviewProduct | null>(null);
+  const [items, setItems] = useState<Map<string, Item>>(new Map());
+  const [sections, setSections] = useState<ShopSection[]>([]);
+  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const questionsRef = useRef<HTMLElement>(null);
 
   const load = useCallback(async () => {
-    setData(await api<ReviewData>(`/api/v1/jobs/${jobId}/review`));
+    const [review, list, secs] = await Promise.all([
+      api<ReviewData>(`/api/v1/jobs/${jobId}/review`),
+      api<{ items: Item[] }>("/api/v1/items"),
+      api<{ sections: ShopSection[] }>("/api/v1/sections"),
+    ]);
+    setData(review);
+    setItems(new Map(list.items.map((it) => [it.id, it])));
+    setSections(secs.sections);
   }, [jobId]);
 
   useEffect(() => {
@@ -45,6 +57,12 @@ export function Review() {
     }
   };
 
+  const putBack = async (p: ReviewProduct) => {
+    if (!window.confirm(t("review.put_back_confirm"))) return;
+    await api(`/api/v1/jobs/${jobId}/products/${p.idx}`, { method: "PATCH", json: { removed: false } }).catch(() => undefined);
+    await load();
+  };
+
   const publish = async () => {
     setBusy(true);
     setError("");
@@ -58,26 +76,36 @@ export function Review() {
     }
   };
 
+  const onlyPrices = open.every((f) => PRICE_KINDS.has(f.kind));
   const footer = open.length ? (
     <button type="button" className="btn primary" onClick={() => questionsRef.current?.scrollIntoView({ behavior: "smooth" })}>
-      {t("review.fix", { count: open.length })}
+      {onlyPrices ? t("review.fix", { count: open.length }) : t("review.answer", { count: open.length })}
     </button>
   ) : (
     <button type="button" className="btn primary" onClick={publish} disabled={busy}>
       {busy ? t("review.publishing") : t("review.publish")}
     </button>
   );
+  const openItem = editing ? items.get(editing) : undefined;
 
   return (
     <Shell title={t("review.found", { count: visible.length })} footer={footer} back="/videos">
       <p className={open.length ? "error" : "ok"}>
-        {open.length ? t("review.check", { count: open.length }) : t("review.all_right")}
+        {open.length
+          ? onlyPrices ? t("review.check", { count: open.length }) : t("review.check_questions", { count: open.length })
+          : t("review.all_right")}
       </p>
+      <p className="muted small">{t("review.tap_hint")}</p>
       <div className="tiles">
         {data.products.map((p) => (
-          <button type="button" key={p.idx} className={`tile${p.removed ? " removed" : ""}`} onClick={() => setEditing(p)}>
+          <button type="button" key={p.idx} className={`tile${p.removed ? " removed" : ""}`}
+            onClick={() => (p.removed ? void putBack(p) : setEditing(p.id))}>
             <span className="photo">
-              {p.image_url ? <img src={apiUrl(p.image_url)} alt="" loading="lazy" /> : null}
+              {p.image_url ? (
+                <img src={apiUrl(p.image_url)} alt="" loading="lazy" />
+              ) : (
+                <span className="nophoto"><Icon name="camera" size={32} /></span>
+              )}
               {p.removed ? (
                 <span className="checktag">{t("review.removed")}</span>
               ) : p.price_inr !== null && !needsCheck.has(p.idx) ? (
@@ -91,7 +119,9 @@ export function Review() {
             </span>
             <span className="body">
               <span className="name">{title(p)}</span>
-              {p.ai_background ? <span className="meta">{t("review.ai_label")}</span> : null}
+              <span className={p.image_url ? "meta" : "meta warn"}>
+                {p.removed ? t("review.tap_to_put_back") : !p.image_url ? t("review.add_photo") : p.ai_background ? t("review.ai_label") : "\u00a0"}
+              </span>
             </span>
           </button>
         ))}
@@ -102,21 +132,30 @@ export function Review() {
           <h2 id="qh">{t("review.questions")}</h2>
           {open.map((flag) => (
             <Question key={flag.id} flag={flag} itemName={(idx) => (byIdx.get(idx) ? title(byIdx.get(idx)!) : `#${idx}`)}
-              onResolve={(body) => resolve(flag, body)} />
+              onResolve={(body) => resolve(flag, body)}
+              onPhoto={flag.product_idx && byIdx.get(flag.product_idx) ? () => setEditing(byIdx.get(flag.product_idx!)!.id) : undefined} />
           ))}
         </section>
       ) : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
 
-      {editing ? <EditSheet product={editing} jobId={jobId} onClose={() => setEditing(null)} onSaved={load} /> : null}
+      {openItem ? (
+        <ItemSheet item={openItem} sections={sections} onClose={() => { setEditing(null); void load(); }}
+          onSaved={(next, removedId) => {
+            if (removedId) setEditing(null);
+            if (next) setItems((m) => new Map(m).set(next.id, next));
+            void load();
+          }} />
+      ) : null}
     </Shell>
   );
 }
 
-function Question({ flag, itemName, onResolve }: {
+function Question({ flag, itemName, onResolve, onPhoto }: {
   flag: Flag;
   itemName: (idx: number) => string;
   onResolve: (body: Record<string, unknown>) => Promise<void>;
+  onPhoto?: () => void;
 }) {
   const { t } = useTranslation();
   const [price, setPrice] = useState("");
@@ -161,6 +200,9 @@ function Question({ flag, itemName, onResolve }: {
       ) : null}
       {flag.kind === "low_conf_mask" ? (
         <div className="row">
+          {onPhoto ? (
+            <button type="button" className="btn small primary" onClick={onPhoto}><Icon name="camera" size={18} />{t("review.change_photo")}</button>
+          ) : null}
           <button type="button" className="btn small" onClick={() => void onResolve({ action: "dismiss" })}>{t("review.photo_fine")}</button>
           <button type="button" className="btn small danger" onClick={() => void onResolve({ action: "remove_item" })}>{t("review.remove")}</button>
         </div>
@@ -176,7 +218,8 @@ function Question({ flag, itemName, onResolve }: {
       ) : null}
       {["price_conflict", "implausible_price", "uncertain_price", "missing_price"].includes(flag.kind) && target !== null ? (
         <form className="row" onSubmit={submitOther}>
-          <input inputMode="numeric" pattern="[0-9]*" aria-label={t("review.other_price")} placeholder={t("review.other_price")}
+          <input inputMode="numeric" pattern="[0-9]*" aria-label={flag.kind === "missing_price" ? t("review.price_label") : t("review.other_price")}
+            placeholder={flag.kind === "missing_price" ? t("review.price_label") : t("review.other_price")}
             value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} />
           <button type="submit" className="btn small" disabled={!price}>{t("review.set_price")}</button>
           {flag.kind === "missing_price" ? (
@@ -190,65 +233,5 @@ function Question({ flag, itemName, onResolve }: {
         ))}</div>
       ) : null}
     </article>
-  );
-}
-
-function EditSheet({ product, jobId, onClose, onSaved }: {
-  product: ReviewProduct;
-  jobId: string;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const { t } = useTranslation();
-  const [price, setPrice] = useState(product.price_inr?.toString() ?? "");
-  const [en, setEn] = useState(product.title_en);
-  const [hi, setHi] = useState(product.title_hi);
-  const [error, setError] = useState("");
-
-  const save = async (body: Record<string, unknown>) => {
-    try {
-      await api(`/api/v1/jobs/${jobId}/products/${product.idx}`, { method: "PATCH", json: body });
-      await onSaved();
-      onClose();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("app.generic_error"));
-    }
-  };
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const body: Record<string, unknown> = { title_en: en, title_hi: hi };
-    const value = Number.parseInt(price, 10);
-    if (value > 0 && value !== product.price_inr) body.price_inr = value;
-    void save(body);
-  };
-
-  return (
-    <div className="scrim" role="presentation" onClick={onClose}>
-      <form className="sheet" role="dialog" aria-modal="true" aria-labelledby="edit-title" onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}>
-        <h2 id="edit-title">{t("review.edit_title")}</h2>
-        <div className="field">
-          <label htmlFor="p-price">{t("review.price_label")}</label>
-          <input id="p-price" className="price-input" inputMode="numeric" pattern="[0-9]*" value={price} autoFocus
-            onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} />
-        </div>
-        <div className="field">
-          <label htmlFor="p-en">{t("review.name_en")}</label>
-          <input id="p-en" value={en} maxLength={200} onChange={(e) => setEn(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="p-hi">{t("review.name_hi")}</label>
-          <input id="p-hi" lang="hi" value={hi} maxLength={200} onChange={(e) => setHi(e.target.value)} />
-        </div>
-        {error ? <p className="error" role="alert">{error}</p> : null}
-        <button type="submit" className="btn primary">{t("review.save")}</button>
-        <button type="button" className={`btn ${product.removed ? "" : "danger"}`}
-          onClick={() => void save({ removed: !product.removed })}>
-          {product.removed ? t("review.restore") : t("review.remove")}
-        </button>
-        <button type="button" className="btn quiet" onClick={onClose}>{t("review.close")}</button>
-      </form>
-    </div>
   );
 }

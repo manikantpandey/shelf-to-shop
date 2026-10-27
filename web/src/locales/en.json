@@ -260,7 +260,13 @@
     "nocamera_title": "No camera found",
     "nocamera_body": "Upload a video you already recorded from your gallery.",
     "insecure_title": "Camera needs a secure link",
-    "insecure_body": "Open this app from an https:// address to use the camera. You can still upload from your gallery."
+    "insecure_body": "Open this app from an https:// address to use the camera. You can still upload from your gallery.",
+    "clip_title": "Pick the minute to use",
+    "other_video": "Pick another video",
+    "use_minute": "Use this minute",
+    "clip_body": "Your video is {{length}} long. We make your items from {{clip}} seconds of it. Slide to where your shelf and prices are.",
+    "clip_from": "Using {{from}} to {{to}}",
+    "clip_hint": "Play the video to check this part shows your items and you say the prices."
   },
   "processing": {
     "title": "Making your items",
@@ -319,7 +325,16 @@
     "keep_both": "Keep both",
     "remove_this": "Remove this one",
     "photo_fine": "Photo is fine",
-    "yes_price": "Yes, {{price}}"
+    "yes_price": "Yes, {{price}}",
+    "tap_hint": "Tap an item to change its price, name or photo.",
+    "put_back_confirm": "Put this item back?",
+    "tap_to_put_back": "Tap to put back",
+    "add_photo": "Add a photo",
+    "change_photo": "Change photo",
+    "answer_one": "Answer {{count}} question",
+    "answer_other": "Answer {{count}} questions",
+    "check_questions_one": "{{count}} question for you before publishing.",
+    "check_questions_other": "{{count}} questions for you before publishing."
   },
   "settings": {
     "title": "Settings",
