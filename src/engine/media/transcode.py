@@ -12,14 +12,28 @@ ASR_SAMPLE_RATE = 24_000  # Muse Voice Transcribe's native rate (dev.meta.ai/doc
 
 
 def normalise_video(
-    src: Path, dst: Path, *, has_audio: bool, limits: Limits = DEFAULT_LIMITS
+    src: Path,
+    dst: Path,
+    *,
+    has_audio: bool,
+    limits: Limits = DEFAULT_LIMITS,
+    clip: tuple[float, float] | None = None,
 ) -> None:
-    """H.264/AAC MP4, longest side <= 1280, <= 30 fps, rotation applied, all metadata dropped."""
+    """H.264/AAC MP4, longest side <= 1280, <= 30 fps, rotation applied, all metadata dropped.
+
+    `clip` = (start, length) in seconds keeps only that part of a longer video.
+    """
     scale = (
         f"scale=w='min({MAX_SIDE},iw)':h='min({MAX_SIDE},ih)'"
         ":force_original_aspect_ratio=decrease:force_divisible_by=2"
     )
-    args: list[str | Path] = ["-y", "-i", src, "-map", "0:v:0"]
+    args: list[str | Path] = ["-y"]
+    if clip is not None:
+        args += ["-ss", f"{max(0.0, clip[0]):.3f}"]
+    args += ["-i", src]
+    if clip is not None:
+        args += ["-t", f"{max(0.1, clip[1]):.3f}"]
+    args += ["-map", "0:v:0"]
     args += ["-map", "0:a:0"] if has_audio else ["-an"]
     args += [
         "-vf", scale, "-fpsmax", str(MAX_FPS),

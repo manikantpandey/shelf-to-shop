@@ -56,7 +56,13 @@ def square_photo(data: bytes) -> bytes:
         flat.paste(image.convert("RGBA"), mask=image.convert("RGBA").getchannel("A"))
         image = flat
     image = image.convert("RGB")
-    image.thumbnail((EXPORT_SIZE, EXPORT_SIZE), Image.Resampling.LANCZOS)
+    # Fit the longest side to the square: shrink big photos, and grow small ones so the item fills
+    # the frame (a 500 px phone crop must not end up as a stamp in a white page).
+    scale = EXPORT_SIZE / max(image.size)
+    image = image.resize(
+        (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+        Image.Resampling.LANCZOS,
+    )
     canvas = Image.new("RGB", (EXPORT_SIZE, EXPORT_SIZE), "white")
     canvas.paste(image, ((EXPORT_SIZE - image.width) // 2, (EXPORT_SIZE - image.height) // 2))
     return save_jpeg(canvas, ai_background=False)

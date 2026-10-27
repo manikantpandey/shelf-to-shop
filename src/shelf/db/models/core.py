@@ -85,6 +85,9 @@ class Job(IdMixin, TimestampMixin, Base):
     stages: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
     # video: made from a recording | manual: holds the items a seller adds by hand
     kind: Mapped[str] = mapped_column(String(10), default="video")
+    # For long uploads: the part the seller picked (seconds from the start, and length).
+    clip_start_s: Mapped[float | None] = mapped_column(default=None)
+    clip_len_s: Mapped[float | None] = mapped_column(default=None)
     error_code: Mapped[str | None] = mapped_column(String(40), default=None)
     error_message: Mapped[str | None] = mapped_column(Text, default=None)
     cost_usd: Mapped[str] = mapped_column(String(20), default="0")

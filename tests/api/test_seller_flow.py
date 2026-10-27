@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -155,3 +156,41 @@ def test_writes_are_committed_before_the_response_is_sent(app_settings: Settings
     with TestClient(app), TestClient(watching) as c:  # type: ignore[arg-type]
         assert c.post("/api/v1/auth/demo", json={"shop_name": "Fast Client"}).status_code == 200
     assert seen == [1]
+
+
+def test_long_videos_ask_which_minute_to_use(
+    app_and_client: tuple[Any, TestClient], tmp_path: Path
+) -> None:
+    app, c = app_and_client
+    ffmpeg = shutil.which("ffmpeg")
+    assert ffmpeg is not None
+    long_clip = tmp_path / "long.mp4"
+    subprocess.run(  # noqa: S603
+        [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+         "testsrc2=size=640x360:rate=10", "-f", "lavfi", "-i", "sine=frequency=300",
+         "-t", "90", "-c:v", "libx264", "-c:a", "aac", str(long_clip)],
+        check=True,
+    )  # fmt: skip
+    r = c.post("/api/v1/auth/demo", json={"shop_name": "Long Video Shop"})
+    h = {"x-csrf-token": c.cookies["sts_csrf"]}
+    c.post("/api/v1/consents/recording", headers=h)
+    r = c.post("/api/v1/uploads", content=long_clip.read_bytes(),
+               headers={**h, "content-type": "video/mp4"})  # fmt: skip
+    assert r.status_code == 201, r.text
+    upload = r.json()
+    assert upload["needs_clip"] is True and upload["max_clip_s"] == 60
+    r = c.post("/api/v1/jobs", json={"upload_id": upload["id"]}, headers=h)
+    assert r.status_code == 422 and r.json()["code"] == "pick_part"
+    job = c.post("/api/v1/jobs", json={"upload_id": upload["id"], "start_s": 20}, headers=h).json()
+    worker = Worker(app.state.session_factory, pipeline_handlers(app), worker_id="t")
+    assert worker.run_once()
+    assert c.get(f"/api/v1/jobs/{job['id']}").json()["status"] == "needs_review"
+
+
+def test_sign_in_keeps_the_language_picked_on_the_page(
+    app_and_client: tuple[Any, TestClient],
+) -> None:
+    _, c = app_and_client
+    r = c.post("/api/v1/auth/demo", json={"shop_name": "Hindi Shop", "language": "hi"})
+    assert r.json()["workspace"]["language"] == "hi"
+    assert c.get("/api/v1/me").json()["workspace"]["language"] == "hi"

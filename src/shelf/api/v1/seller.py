@@ -20,27 +20,34 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from engine.export.whatsapp import InvalidWhatsAppNumberError, normalise_number
-from engine.media.probe import MediaRejectedError, MediaRules, probe, sniff_container
+from engine.media.probe import (
+    CLIP_S,
+    LONG_UPLOAD_S,
+    MediaRejectedError,
+    MediaRules,
+    probe,
+    sniff_container,
+)
 from engine.prices.inr import format_inr
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import SellerDep, end_session, start_session
 from shelf.catalog.publish import publish_job
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
+from shelf.core.ratelimit import SIGNIN_PER_IP, UPLOAD_PER_SELLER, client_ip, limiter
 from shelf.db.models import AuditEvent, Catalog, FlagRow, Job, Product, Upload, User, Workspace
 from shelf.demo import clone_template, find_template
-from shelf.jobs.service import create_job, open_flag_count, pending_task_exists, retry_job
+from shelf.jobs.service import (
+    create_job,
+    open_flag_count,
+    pending_task_exists,
+    retry_job,
+    settle_price_flags,
+)
 from shelf.storage import LocalStorage
 
 router = APIRouter()
 MAX_UPLOAD_BYTES = 200 * 1024**2
-PRICE_FLAGS = {
-    "missing_price",
-    "price_conflict",
-    "ambiguous_price",
-    "implausible_price",
-    "uncertain_price",
-}
 
 
 def _storage(request: Request) -> LocalStorage:
@@ -81,6 +88,8 @@ class DemoLogin(BaseModel):
     shop_name: str | None = Field(default=None, min_length=2, max_length=80)
     # Start from a private copy of the sample shop instead of an empty one.
     sample: bool = False
+    # The language picked on the sign-in page becomes the shop's language.
+    language: Literal["en", "hi"] | None = None
 
 
 def _free_slug(db: Session, name: str) -> str:
@@ -97,6 +106,7 @@ def demo_login(
 ) -> dict[str, Any]:
     if not settings.demo_login_enabled:
         raise AppError("not_available", "Demo sign-in is switched off.", status=404)
+    limiter(request).hit(SIGNIN_PER_IP, client_ip(request))
     template = find_template(db) if body.sample else None
     if body.sample and template is None:
         raise AppError("no_sample", "The sample shop is not set up yet.", status=404)
@@ -112,6 +122,8 @@ def demo_login(
         ws = Workspace(owner_id=user.id, name=name, slug=_free_slug(db, name))
         db.add(ws)
         db.flush()
+    if body.language is not None:
+        ws.language = body.language
     row = start_session(db, settings, user, response)
     _audit(db, ws.id, f"user:{user.id}", "auth.demo_login", sample=template is not None)
     # The CSRF token also travels in the body so a client on another origin (a future Android
@@ -189,6 +201,7 @@ def withdraw_consent(
 async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> dict[str, Any]:
     if seller.workspace.consent_recording_at is None:
         raise AppError("consent_required", "Agree to the recording notice first.", status=403)
+    limiter(request).hit(UPLOAD_PER_SELLER, str(seller.workspace.id))
     declared = int(request.headers.get("content-length") or 0)
     if declared > MAX_UPLOAD_BYTES:
         raise AppError("too_large", "The video is over 200 MB. Record a shorter one.", status=413)
@@ -218,7 +231,8 @@ async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> d
             raise MediaRejectedError(
                 "not_a_video", "That file is not a video. Pick an MP4 or WebM."
             )
-        info = probe(dest, MediaRules())
+        # Longer videos are accepted; the seller then picks which minute to use.
+        info = probe(dest, MediaRules(max_duration_s=LONG_UPLOAD_S))
     except MediaRejectedError as exc:
         dest.unlink(missing_ok=True)
         raise AppError(exc.code, str(exc).capitalize() + ".", status=422) from exc
@@ -232,12 +246,21 @@ async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> d
     )
     db.add(row)
     db.flush()
-    return {"id": str(row.id), "duration_s": round(info.duration_s, 1), "size_bytes": size}
+    return {
+        "id": str(row.id),
+        "duration_s": round(info.duration_s, 1),
+        "size_bytes": size,
+        # Over this, the seller picks which part to use (POST /jobs with start_s).
+        "max_clip_s": CLIP_S,
+        "needs_clip": info.duration_s > MediaRules().max_duration_s,
+    }
 
 
 # --- Jobs and review ----------------------------------------------------------------------
 class NewJob(BaseModel):
     upload_id: uuid.UUID
+    # For videos longer than one walk-past: where the part to use starts (it runs CLIP_S seconds).
+    start_s: float | None = Field(default=None, ge=0)
 
 
 def _job(db: Session, seller_ws: uuid.UUID, job_id: uuid.UUID) -> Job:
@@ -268,7 +291,15 @@ def new_job(body: NewJob, seller: SellerDep, db: SessionDep) -> dict[str, Any]:
     )
     if upload is None:
         raise AppError("not_found", "That video was not found. Upload it again.", status=404)
+    clip: tuple[float, float] | None = None
+    if upload.duration_s > MediaRules().max_duration_s:
+        if body.start_s is None:
+            raise AppError("pick_part", "This video is long. Pick the minute to use.", status=422)
+        start = min(body.start_s, max(0.0, upload.duration_s - MediaRules().min_duration_s))
+        clip = (round(start, 2), round(min(CLIP_S, upload.duration_s - start), 2))
     job = create_job(db, seller.workspace, upload, f"user:{seller.user.id}")
+    if clip is not None:
+        job.clip_start_s, job.clip_len_s = clip
     return job_out(job)
 
 
@@ -299,7 +330,9 @@ def retry(job_id: uuid.UUID, seller: SellerDep, db: SessionDep) -> dict[str, Any
 
 
 def product_out(p: Product, job_id: uuid.UUID) -> dict[str, Any]:
+    version = int(p.updated_at.timestamp())
     return {
+        "id": str(p.id),
         "idx": p.idx,
         "title_en": p.title_en,
         "title_hi": p.title_hi,
@@ -311,7 +344,7 @@ def product_out(p: Product, job_id: uuid.UUID) -> dict[str, Any]:
         "confidence": p.confidence,
         "brand": p.brand,
         "category": p.category,
-        "image_url": f"/api/v1/jobs/{job_id}/images/{p.idx}" if p.image_key else None,
+        "image_url": f"/api/v1/jobs/{job_id}/images/{p.idx}?v={version}" if p.image_key else None,
         "ai_background": p.ai_background,
         "removed": p.removed,
     }
@@ -366,12 +399,6 @@ def _product(db: Session, job: Job, idx: int) -> Product:
     return p
 
 
-def _settle_price_flags(db: Session, job: Job, idx: int, how: dict[str, Any]) -> None:
-    for f in db.scalars(select(FlagRow).where(FlagRow.job_id == job.id, FlagRow.status == "open")):
-        if f.kind in PRICE_FLAGS and (f.product_idx == idx or idx in f.candidates):
-            f.status, f.resolution = "resolved", how
-
-
 class ProductPatch(BaseModel):
     price_inr: int | None = Field(default=None, gt=0, le=10_000_000)
     title_en: str | None = Field(default=None, min_length=1, max_length=200)
@@ -387,7 +414,7 @@ def edit_product(
     p = _product(db, job, idx)
     if body.price_inr is not None:
         p.price_inr, p.price_source, p.confidence = body.price_inr, "seller", 1.0
-        _settle_price_flags(db, job, idx, {"action": "seller_price", "price_inr": body.price_inr})
+        settle_price_flags(db, job, idx, {"action": "seller_price", "price_inr": body.price_inr})
     if body.title_en is not None:
         p.title_en = body.title_en.strip()
     if body.title_hi is not None:
@@ -437,7 +464,7 @@ def resolve_flag(
             "price_inr": body.price_inr,
             "product_idx": target,
         }
-        _settle_price_flags(db, job, target, flag.resolution)
+        settle_price_flags(db, job, target, flag.resolution)
     return flag_out(flag)
 
 

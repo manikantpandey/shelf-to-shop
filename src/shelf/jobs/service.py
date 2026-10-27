@@ -116,6 +116,9 @@ def run_pipeline_job(
         video = storage.path(upload.storage_key)
         work = storage.path(job.work_key)
         workspace_id, ai_mark = str(job.workspace_id), True
+        clip = None
+        if job.clip_start_s is not None and job.clip_len_s is not None:
+            clip = (job.clip_start_s, job.clip_len_s)
         ws = db.get(Workspace, job.workspace_id)
         if ws is not None:
             ai_mark = ws.ai_mark
@@ -139,7 +142,7 @@ def run_pipeline_job(
         try:
             return await Pipeline(
                 providers, work / "work", ctx, ai_mark=ai_mark, on_event=on_event
-            ).run(video)
+            ).run(video, clip)
         finally:
             if client is not None:
                 await client.aclose()
@@ -152,7 +155,7 @@ def run_pipeline_job(
             row = db.get(Job, uuid.UUID(job_id))
             if row is not None:
                 row.status, row.error_code, row.error_message = "failed", code, message
-                row.cost_usd = str(_cost(log))
+                row.cost_usd = str(Decimal(row.cost_usd or "0") + _cost(log))
         raise PermanentTaskError(f"{code}: {type(exc).__name__}") from exc
 
     with factory.begin() as db:
@@ -161,7 +164,8 @@ def run_pipeline_job(
             return
         _save_review(db, row, result, storage)
         row.status = "needs_review"
-        row.cost_usd = str(_cost(log))
+        # Add, never replace: a retry's spend comes on top of the earlier attempt's.
+        row.cost_usd = str(Decimal(row.cost_usd or "0") + _cost(log))
 
 
 def _cost(log: MemoryRunLog) -> Decimal:
@@ -241,3 +245,32 @@ def pending_task_exists(db: Session, job: Job) -> bool:
         select(Task).where(Task.kind == PIPELINE_TASK, Task.status.in_(["queued", "running"]))
     ).all()
     return any(t.payload.get("job_id") == str(job.id) for t in rows)
+
+
+PRICE_FLAGS = {
+    "missing_price",
+    "price_conflict",
+    "ambiguous_price",
+    "implausible_price",
+    "uncertain_price",
+}
+
+
+def settle_price_flags(db: Session, job: Job, idx: int, how: dict[str, object]) -> None:
+    """The seller set this item's price: its open price questions are answered."""
+    for f in db.scalars(select(FlagRow).where(FlagRow.job_id == job.id, FlagRow.status == "open")):
+        if f.kind in PRICE_FLAGS and (f.product_idx == idx or idx in f.candidates):
+            f.status, f.resolution = "resolved", dict(how)
+
+
+def settle_photo_flags(db: Session, job: Job, idx: int) -> None:
+    """The seller gave this item a new photo: "the photo may be cut badly" is answered."""
+    for f in db.scalars(
+        select(FlagRow).where(
+            FlagRow.job_id == job.id,
+            FlagRow.status == "open",
+            FlagRow.kind == "low_conf_mask",
+            FlagRow.product_idx == idx,
+        )
+    ):
+        f.status, f.resolution = "resolved", {"action": "new_photo"}

@@ -24,6 +24,12 @@ class MediaRejectedError(ValueError):
         self.code = code
 
 
+# Uploads may be longer than one walk-past: the seller then picks which part to use.
+LONG_UPLOAD_S = 600.0
+# How much of a long video one catalog run uses.
+CLIP_S = 60.0
+
+
 @dataclass(frozen=True)
 class MediaRules:
     max_duration_s: float = 75.0

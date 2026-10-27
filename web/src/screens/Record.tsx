@@ -7,9 +7,10 @@ import { Icon } from "../components/Icon";
 import { cameraProblem, pickMimeType, type CameraProblem } from "../recorder/mime";
 import { useSession } from "../session";
 import { Shell } from "../Shell";
+import { clock as clockText } from "./Videos";
 
 const MAX_SECONDS = 60;
-type Phase = "consent" | "starting" | "live" | "recording" | "preview" | "uploading" | "problem";
+type Phase = "consent" | "starting" | "live" | "recording" | "preview" | "uploading" | "clip" | "problem";
 
 export function Record() {
   const { t } = useTranslation();
@@ -23,6 +24,10 @@ export function Record() {
   const [video, setVideo] = useState<Blob | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  // A long upload: which minute of it to use.
+  const [long, setLong] = useState<{ id: string; duration: number; clip: number } | null>(null);
+  const [start, setStart] = useState(0);
+  const clipRef = useRef<HTMLVideoElement>(null);
 
   const liveRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -169,26 +174,50 @@ export function Record() {
     void startCamera();
   };
 
+  const makeJob = async (uploadId: string, startS?: number) => {
+    const job = await api<Job>("/api/v1/jobs", { method: "POST", json: { upload_id: uploadId, start_s: startS ?? null } });
+    navigate(`/jobs/${job.id}`);
+  };
+
   const send = async (blob: Blob) => {
     setPhase("uploading");
     setError("");
     setProgress(0);
     try {
       const upload = await uploadVideo(blob, setProgress);
-      const job = await api<Job>("/api/v1/jobs", { method: "POST", json: { upload_id: upload.id } });
-      navigate(`/jobs/${job.id}`);
+      if (upload.needs_clip) {
+        setLong({ id: upload.id, duration: upload.duration_s, clip: upload.max_clip_s });
+        setStart(0);
+        setPhase("clip");
+        return;
+      }
+      await makeJob(upload.id);
     } catch (err) {
       const message = err instanceof ApiError && err.status === 422 ? err.message : t("record.upload_failed");
       setError(message);
-      setPhase(video ? "preview" : "problem");
+      // Always come back to the video with the reason shown (never silently to the camera).
+      setPhase("preview");
+    }
+  };
+
+  const chooseClip = async () => {
+    if (!long) return;
+    setError("");
+    try {
+      await makeJob(long.id, start);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("record.upload_failed"));
     }
   };
 
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (file) {
       stopCamera();
       setVideo(file);
+      if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+      previewUrl.current = URL.createObjectURL(file);
       void send(file);
     }
   };
@@ -226,6 +255,39 @@ export function Record() {
         {problem === "denied" ? (
           <button type="button" className="btn" onClick={() => void startCamera()}>{t("record.try_again")}</button>
         ) : null}
+        {error ? <p className="error" role="alert">{error}</p> : null}
+      </Shell>
+    );
+  }
+
+  if (phase === "clip" && long) {
+    const latest = Math.max(0, long.duration - long.clip);
+    const end = Math.min(long.duration, start + long.clip);
+    const move = (value: number) => {
+      setStart(value);
+      if (clipRef.current) clipRef.current.currentTime = value;
+    };
+    return (
+      <Shell
+        title={t("record.clip_title")}
+        footer={
+          <>
+            <button type="button" className="btn" onClick={retake}>{t("record.other_video")}</button>
+            <button type="button" className="btn primary" onClick={() => void chooseClip()}>{t("record.use_minute")}</button>
+          </>
+        }
+      >
+        <p>{t("record.clip_body", { length: clockText(long.duration), clip: Math.round(long.clip) })}</p>
+        {previewUrl.current ? (
+          <video ref={clipRef} src={previewUrl.current} controls playsInline className="preview"
+            onLoadedMetadata={(e) => { e.currentTarget.currentTime = start; }} />
+        ) : null}
+        <div className="field">
+          <label htmlFor="clip-start">{t("record.clip_from", { from: clockText(start), to: clockText(end) })}</label>
+          <input id="clip-start" type="range" min={0} max={Math.floor(latest)} step={1} value={Math.floor(start)}
+            onChange={(e) => move(Number(e.target.value))} style={{ width: "100%" }} />
+          <span className="hint">{t("record.clip_hint")}</span>
+        </div>
         {error ? <p className="error" role="alert">{error}</p> : null}
       </Shell>
     );

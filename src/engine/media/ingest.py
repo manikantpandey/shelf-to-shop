@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from pydantic import BaseModel
 
 from engine.media.audio import PauseRules, read_wav, speech_segments
 from engine.media.ffmpeg import DEFAULT_LIMITS, Limits
-from engine.media.probe import MediaRules, ProbeResult, probe
+from engine.media.probe import LONG_UPLOAD_S, MediaRules, ProbeResult, probe
 from engine.media.transcode import extract_audio, normalise_video, sample_frames
 
 
@@ -43,13 +44,16 @@ def ingest(
     limits: Limits = DEFAULT_LIMITS,
     frame_every_s: float = 1.0,
     pauses: PauseRules | None = None,
+    clip: tuple[float, float] | None = None,
 ) -> IngestResult:
+    """`clip` = (start, length): use only that part of a longer upload (the seller picked it)."""
     rules = rules or MediaRules()
     work_dir.mkdir(parents=True, exist_ok=True)
-    source: ProbeResult = probe(src, rules, limits)
+    long_ok = replace(rules, max_duration_s=max(rules.max_duration_s, LONG_UPLOAD_S))
+    source: ProbeResult = probe(src, rules if clip is None else long_ok, limits)
 
     video = work_dir / "video_720p.mp4"
-    normalise_video(src, video, has_audio=source.has_audio, limits=limits)
+    normalise_video(src, video, has_audio=source.has_audio, limits=limits, clip=clip)
     out: ProbeResult = probe(video, rules, limits)
 
     audio: Path | None = None

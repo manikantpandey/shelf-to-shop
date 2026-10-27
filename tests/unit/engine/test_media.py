@@ -182,3 +182,14 @@ def test_browser_recording_without_header_duration(tmp_path: Path) -> None:
     result = probe(path, MediaRules())
     assert result.container == "ebml"  # WebM is an EBML (Matroska) file
     assert 3.5 <= result.duration_s <= 4.5
+
+
+@needs_ffmpeg
+def test_long_video_uses_only_the_picked_minute(tmp_path: Path) -> None:
+    src = make_clip(tmp_path / "long.mp4", size="320x240", rate=10, seconds=90)
+    with pytest.raises(MediaRejectedError) as exc:
+        ingest(src, tmp_path / "whole")  # too long to use whole
+    assert exc.value.code == "too_long"
+    result = ingest(src, tmp_path / "work", clip=(20.0, 60.0))
+    assert 59.0 <= result.duration_s <= 61.0
+    assert result.audio is not None
