@@ -1,0 +1,7 @@
+body { font: 16px/1.4 system-ui, sans-serif; margin: 16px; max-width: 640px; }
+video { width: 100%; background: #000; aspect-ratio: 16 / 9; }
+.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+button, select { min-height: 48px; padding: 0 16px; font-size: 16px; }
+meter { width: 100%; height: 16px; }
+pre { white-space: pre-wrap; word-break: break-word; background: #eef0f2; padding: 8px; font-size: 13px; }
+#countdown { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 700; }

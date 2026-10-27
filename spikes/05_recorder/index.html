@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spike 5: recorder test</title>
+  <link rel="stylesheet" href="spike.css">
+</head>
+<body>
+  <h1>Recorder test</h1>
+  <p>Open this on the phone. Tap <b>Start camera</b>, then <b>Record</b>. It stops by itself at 60 s.
+     When done, tap <b>Copy results</b> and paste them back to the developer.</p>
+
+  <section>
+    <h2>Environment</h2>
+    <pre id="env"></pre>
+  </section>
+
+  <section>
+    <video id="live" playsinline muted autoplay></video>
+    <div class="row">
+      <button id="start">Start camera</button>
+      <button id="torch" disabled>Torch</button>
+    </div>
+    <div class="row">
+      <label for="mime">Format</label>
+      <select id="mime"></select>
+    </div>
+    <div class="row">
+      <button id="record" disabled>Record</button>
+      <button id="stop" disabled>Stop</button>
+      <span id="countdown" aria-live="polite"></span>
+    </div>
+    <meter id="mic" min="0" max="1" value="0" aria-label="Microphone level"></meter>
+  </section>
+
+  <section>
+    <h2>Result</h2>
+    <video id="preview" playsinline controls></video>
+    <a id="download" download hidden>Download recording</a>
+    <pre id="result"></pre>
+    <button id="copy" disabled>Copy results</button>
+  </section>
+
+  <script type="module" src="recorder.js"></script>
+</body>
+</html>
