@@ -1,0 +1,107 @@
+{
+  "video": "WhatsApp Video 2026-10-27 at 9.27.58 PM.mp4",
+  "consent": "seller's own shop and stock, filmed by the seller; no customers in frame",
+  "labels_source": "prices confirmed by the seller on 2026-10-27; on-screen times approximate (from detection), spoken times not labelled",
+  "language_notes": "Hinglish, prices in Hindi words; WhatsApp-compressed 478x850",
+  "products": [
+    {
+      "n": 1,
+      "what": "stacked orange black and green Rajesh branded packets in foreground",
+      "appears_s": [
+        0.0,
+        3.0
+      ],
+      "spoken_price_inr": null,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": null,
+      "tag_price_inr": null,
+      "notes": "first glimpse of masala packets; no price of its own"
+    },
+    {
+      "n": 2,
+      "what": "MamyPoko Pants Standard baby diapers pack size L 14",
+      "appears_s": [
+        3.0,
+        12.0
+      ],
+      "spoken_price_inr": 10,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "10 rupee per piece de denge",
+      "tag_price_inr": null,
+      "notes": "per piece"
+    },
+    {
+      "n": 3,
+      "what": "Rajesh Meat Masala sachets hanging strip",
+      "appears_s": [
+        12.5,
+        21.5
+      ],
+      "spoken_price_inr": 8,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "2 masale 8 rupee me de denge",
+      "tag_price_inr": null,
+      "notes": "2 sachets for ₹8"
+    },
+    {
+      "n": 4,
+      "what": "Smith and Jones Ginger Garlic Paste sachets",
+      "appears_s": [
+        22.0,
+        27.0
+      ],
+      "spoken_price_inr": 12,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "3 masala 12 rupee me de denge",
+      "tag_price_inr": null,
+      "notes": "'बारह बारह' = ₹12 each, 3 sachets"
+    },
+    {
+      "n": 5,
+      "what": "packaged sliced bread loaves in yellow crate",
+      "appears_s": [
+        28.0,
+        34.0
+      ],
+      "spoken_price_inr": 15,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "1 bread 15 ka denge",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 6,
+      "what": "Good Day small biscuit packs in yellow crate",
+      "appears_s": [
+        34.0,
+        37.5
+      ],
+      "spoken_price_inr": 10,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye chhota wala 10 ka denge",
+      "tag_price_inr": null,
+      "notes": "small pack"
+    },
+    {
+      "n": 7,
+      "what": "large plastic jar of wrapped chocolate toffees with blue lid",
+      "appears_s": [
+        38.0,
+        48.0
+      ],
+      "spoken_price_inr": 100,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "per dabba 100 rupee ka denge",
+      "tag_price_inr": null,
+      "notes": "per jar"
+    }
+  ],
+  "seeded_errors": []
+}

@@ -1,0 +1,79 @@
+{
+  "video": "WhatsApp Video 2026-10-27 at 9.31.53 PM.mp4",
+  "consent": "seller's own shop and stock, filmed by the seller; no customers in frame",
+  "labels_source": "prices confirmed by the seller on 2026-10-27; on-screen times approximate (from detection), spoken times not labelled",
+  "language_notes": "Hinglish, prices in Hindi words; WhatsApp-compressed 478x850",
+  "products": [
+    {
+      "n": 1,
+      "what": "Lehor Soda sparkling water in transparent plastic bottle with black label and white cap",
+      "appears_s": [
+        0.8,
+        23.0
+      ],
+      "spoken_price_inr": 15,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye soda hum de rahe hain 15 ki",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 2,
+      "what": "Pepsi Extra Fizz cola in plastic bottle with blue label and blue cap",
+      "appears_s": [
+        2.0,
+        32.0
+      ],
+      "spoken_price_inr": 15,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye jo Pepsi hai, ye hum 15 ki de rahe hain",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 3,
+      "what": "Slice mango drink in orange plastic bottle with white mango label and green cap",
+      "appears_s": [
+        5.5,
+        32.0
+      ],
+      "spoken_price_inr": 20,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye Slice jo hai, wo hum 20 ki de rahe hain",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 4,
+      "what": "Mirinda orange soda in large transparent plastic bottle with red cap",
+      "appears_s": [
+        18.5,
+        23.5
+      ],
+      "spoken_price_inr": 50,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye badhi wali Mirinda hum de rahe hain 50 ki",
+      "tag_price_inr": null,
+      "notes": "large bottle"
+    },
+    {
+      "n": 5,
+      "what": "Mirinda orange soda in orange aluminium can",
+      "appears_s": [
+        26.0,
+        32.5
+      ],
+      "spoken_price_inr": 30,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "Aur humare paas can bhi hai Mirinda ki, ye hum de rahe hain 30 ki",
+      "tag_price_inr": null,
+      "notes": "can"
+    }
+  ],
+  "seeded_errors": []
+}

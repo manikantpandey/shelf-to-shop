@@ -1,0 +1,51 @@
+{
+  "video": "WhatsApp Video 2026-10-27 at 9.23.26 PM.mp4",
+  "consent": "seller's own shop and stock, filmed by the seller; no customers in frame",
+  "labels_source": "prices confirmed by the seller on 2026-10-27; on-screen times approximate (from detection), spoken times not labelled",
+  "language_notes": "Hinglish, prices in Hindi words; WhatsApp-compressed 478x850",
+  "products": [
+    {
+      "n": 1,
+      "what": "blue Haldiram's Nut Cracker Signature Masala peanuts pack",
+      "appears_s": [
+        1.5,
+        11.0
+      ],
+      "spoken_price_inr": 4,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye nutcracker hum available kara rahe hain chaar rupaye mein",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 2,
+      "what": "pink Haldiram's Salted Peanuts Nut Classics pack",
+      "appears_s": [
+        1.8,
+        17.5
+      ],
+      "spoken_price_inr": 4,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "ye salted peanut hai isko bhi hum same price mein de rahe hain chaar rupaye mein",
+      "tag_price_inr": null,
+      "notes": ""
+    },
+    {
+      "n": 3,
+      "what": "magenta Haldiram's Punjabi Tadka fried sticks pack",
+      "appears_s": [
+        17.0,
+        23.5
+      ],
+      "spoken_price_inr": 4,
+      "spoken_at_s": null,
+      "spoken_end_s": null,
+      "spoken_words": "humare paas Punjabi tadka hai to ye bhi same pricing hai",
+      "tag_price_inr": 5,
+      "notes": "said 'same pricing' as the ₹4 items; pack prints ₹5/- ONLY"
+    }
+  ],
+  "seeded_errors": []
+}
