@@ -51,6 +51,8 @@ jobs:
         run: uv run mypy
       - name: Module boundaries
         run: uv run lint-imports
+      - name: CloudFormation lint
+        run: uvx cfn-lint deploy/cloudformation.yml
       - name: Tests
         run: uv run pytest
 

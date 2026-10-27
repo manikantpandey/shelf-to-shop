@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Shelf-to-Shop on one EC2 machine (Docker Compose: Caddy + API + worker + Postgres).
+  No SSH: connect with Session Manager. Secrets are read from SSM Parameter Store at boot.
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: shop.shankhyaai.com
+    Description: Public hostname; point its DNS A record at the ElasticIp output.
+  AcmeEmail:
+    Type: String
+    Description: Email for Let's Encrypt certificate notices.
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.medium, t3.large, t3a.medium]
+  VolumeSizeGiB:
+    Type: Number
+    Default: 30
+    MinValue: 20
+  RepoUrl:
+    Type: String
+    Default: https://github.com/manikantpandey/shelf-to-shop.git
+  RepoRef:
+    Type: String
+    Default: main
+  SecretsPath:
+    Type: String
+    Default: /shelf-to-shop
+    AllowedPattern: ^/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$
+    Description: Parameter Store path (no trailing slash) holding META_API_KEY, SECRET_KEY, POSTGRES_PASSWORD as SecureString.
+  UbuntuAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+
+Resources:
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP and HTTPS only (no SSH; use Session Manager)
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: udp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIpv6: "::/0" }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIpv6: "::/0" }
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: read-app-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [ssm:GetParametersByPath, ssm:GetParameters, ssm:GetParameter]
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPath}
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPath}/*
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  Server:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref UbuntuAmi
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds: [!GetAtt WebSecurityGroup.GroupId]
+      MetadataOptions:
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: !Ref VolumeSizeGiB
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - { Key: Name, Value: shelf-to-shop }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          apt-get update
+          apt-get install -y git
+          git clone --depth 1 --branch ${RepoRef} ${RepoUrl} /opt/shelf
+          /opt/shelf/deploy/bootstrap.sh "${DomainName}" "${AcmeEmail}" "${SecretsPath}/" "${AWS::Region}"
+
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Server
+
+Outputs:
+  ElasticIp:
+    Description: Point the DNS A record for DomainName here.
+    Value: !Ref ElasticIp
+  InstanceId:
+    Value: !Ref Server
+  SessionManager:
+    Description: Open a shell on the server in the browser.
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/systems-manager/session-manager/${Server}
+  SiteUrl:
+    Value: !Sub https://${DomainName}

@@ -13,6 +13,7 @@ dependencies = [
   "meta-sam-parser==0.1.0",
   "numpy>=2.1",
   "pillow>=11.0",
+  "psycopg[binary]>=3.3.6",
   "pydantic>=2.9",
   "pydantic-settings>=2.16.1",
   "sqlalchemy>=2.1.6",

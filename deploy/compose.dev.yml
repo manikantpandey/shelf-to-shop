@@ -1,0 +1,53 @@
+# Local development: `make dev`. API with the worker inline, Postgres, and the web dev server.
+# Uses fake providers unless you set PROVIDERS=meta and META_API_KEY in your shell or .env.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shelf
+      POSTGRES_USER: shelf
+      POSTGRES_PASSWORD: shelf-dev-only
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shelf -d shelf"]
+      interval: 3s
+      retries: 30
+
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    environment:
+      ENVIRONMENT: dev
+      DATABASE_URL: postgresql+psycopg://shelf:shelf-dev-only@db:5432/shelf
+      PROVIDERS: ${PROVIDERS:-fake}
+      META_API_KEY: ${META_API_KEY:-}
+      FAKE_SCENARIO: /app/evals/labels/synth_a.json
+      DEMO_LOGIN_ENABLED: "true"
+      WORKER_INLINE: "true"
+      PUBLIC_BASE_URL: http://localhost:5173
+      API_BASE_URL: http://localhost:8000
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    volumes:
+      - ../evals/labels:/app/evals/labels:ro
+      - devmedia:/data
+    command: ["sh", "-c", "alembic upgrade head && uvicorn --factory shelf.main:create_app --host 0.0.0.0 --port 8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    image: node:22-alpine
+    working_dir: /web
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    volumes:
+      - ../web:/web
+      - webmodules:/web/node_modules
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && npx vite --host 0.0.0.0 --port 5173"]
+    ports:
+      - "5173:5173"
+
+volumes:
+  devmedia:
+  webmodules:

@@ -1,0 +1,16 @@
+.git
+.venv
+**/__pycache__
+**/node_modules
+web/dist
+web/test-results
+web/playwright-report
+web/e2e/.fixtures
+storage
+output
+spikes
+evals/videos
+docs/screenshots
+.env
+**/.env
+*.db
