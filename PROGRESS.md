@@ -21,6 +21,70 @@ worktree agents for engine/shelf/web code.
 
 ---
 
+## Session 2: Oct 27 (Day 1 continued; Day 2 work pulled forward)
+
+### Done
+- Pushed `main` to github.com/manikantpandey/shelf-to-shop (agreed cadence: push at the end of each day
+  after tests and a full-history gitleaks scan; never force-push).
+- Backend skeleton (`src/shelf`): settings with production guards (no demo login / fake providers in
+  prod, no contributor models), app factory, plugin loading by module path, request ids, JSON logs with
+  a scrubber (keys, emails, Indian mobile numbers), problem+json errors that never echo input,
+  SQLAlchemy base with UUIDv7 ids, Alembic env (batch mode), health/ready endpoints.
+- Engine foundations (`src/engine`): typed provider errors per Meta's documented status codes; retries
+  with full jitter honouring Retry-After (no retry on 4xx/504); circuit breaker; outbound host allowlist
+  (https only); Meta client (Responses, streaming with failure events, Files with 1 h expiry, images,
+  ASR); spend estimates from published prices with job/workspace-day/instance-day caps; run log;
+  schema-strict structured calls with untrusted-data framing, `store: false` and one repair retry.
+- Hinglish price parser (Roman + Devanagari words, digits, fractions, colloquial pairs) with property
+  tests; INR formatting (Indian grouping, feed price `1200.00 INR`).
+- Hardened ffmpeg ingest: magic-byte sniff, ffprobe rules, H.264/AAC normalisation (≤1280 px, ≤30 fps,
+  GPS/metadata stripped), 24 kHz mono WAV, frames, RMS pause detection.
+- Export: Meta feed CSV with a validator for every catalog-reference rule; `fb_product_category`
+  mapping for our verticals verified against Meta's published taxonomy
+  (`scripts/verify_fb_categories.py`, 24/24 match); wa.me order links.
+- Compositing: product pixels copied last and asserted identical; contact shadow and the optional
+  "AI background" corner mark only touch backdrop pixels; hole filling; 1024 px JPEG with XMP
+  `DigitalSourceType = compositeSynthetic`, no EXIF.
+- DB-backed task queue (`src/shelf/jobs`): leased claims via conditional UPDATE (one winner even on
+  SQLite), lease takeover after a crash, jittered retries then dead, worker loop; first Alembic
+  migration (tasks table, portable DDL).
+- **Preliminary spikes 1, 1b, 2, 3 on a synthetic clip** (Muse Image products + Indian-English TTS at
+  known times; `spikes/make_synthetic_clip.py`). Full write-up and the proposed pipeline are in
+  `spikes/RESULTS.md`. Headlines: Muse Spark 6/6 items + tag read; one-call price pairing 5/6;
+  SAM point prompts beat Spark boxes, video tracking swaps identities; whole-file transcript +
+  pause-span chunk alignment times prices within 0.01 s; ~$0.08 per 32 s clip.
+- `docs/design-plan.md` being written (docs agent), required before any UI code.
+
+### Broken / risks
+- Synthetic clip ≠ real seller speech: TTS mispronunciations caused 2/5 ASR price misses (one read as
+  10,000). Real clips must confirm spikes 1–3; the verifier needs an outlier check.
+- `meta-sam-parser` drops long video streams unless SSE events are buffered first (handled in spikes;
+  the engine's segmenter must do the same).
+- Composite polish (Day 6): the contact shadow is faint and one_bit mask edges look slightly jagged.
+- Baseten still unverified (`BASETEN_API_KEY` empty).
+- API spend so far: about $0.35 (all spikes, synthetic images, failed video attempts).
+
+### Test results
+- `make check`: ruff, mypy (strict, 52 files), import-linter (2 contracts kept), pytest **160 passed**
+  in ~19 s (media tests use real ffmpeg on synthetic lavfi clips; queue tests include a 6-thread race).
+- gitleaks full history: no leaks.
+
+### Next 3 tasks
+1. **Your go-ahead on the proposed pipeline** (`spikes/RESULTS.md`), then the Day 3 CLI end to end:
+   provider implementations (detect, transcribe+align, segment, backdrop), stages with cache/resume,
+   match_prices + verify, export.
+2. Re-run spikes 1–3 on your two real clips the moment they are in `evals/videos/`.
+3. Fake providers driven by a labelled clip (offline pipeline + e2e tests), wired to the queue worker.
+
+### Open questions
+1. Go-ahead on the pipeline design in `spikes/RESULTS.md`, or wait for real-clip spike results?
+2. Hosting target for the Day 4 HTTPS deploy (needed by Oct 28).
+3. Commerce Manager access before Oct 29.
+4. `BASETEN_API_KEY`, the two clips, and the spike 5 phone results.
+5. `claude.md` is untracked: commit the brief to the public repo, or keep it local?
+
+---
+
 ## Session 1: Oct 27 (Day 1)
 
 ### Done
