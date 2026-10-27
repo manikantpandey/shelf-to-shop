@@ -105,7 +105,26 @@ with no spoken price. Real clips must confirm everything below; TTS mispronounce
   to the parser.
 - Cost $0.002 per 32 s.
 
-### Proposed pipeline (for your go-ahead)
+### End-to-end runs on synth_a with the real pipeline (2026-10-27 evening)
+`uv run python -m shelf.cli process evals/videos/synth_a.mp4 --shop "Sharma Sarees" --whatsapp ...`
+1. **One combined Muse Spark call (products + prices) drifted**: right time windows, but descriptions,
+   colours and prices shifted one item from item 3 on, the green saree went missing and the tag's 1100
+   came back as a spoken price. Split into a vision-only listing + a pairing call keyed by on-screen
+   time (as in spikes 1 and 1b).
+2. **The pairing call was cut off** at 4,000 output tokens (reasoning counts toward the limit). Now
+   16k, and any `incomplete` answer is retried once with double the budget instead of a "repair".
+3. ASR variance between runs: "dedh hazaar" came back as "दस हजार", "देव हजार" or not at all; each
+   phrase sometimes became its own turn; a `<|speaker_A|>` token leaked into text. Context now comes
+   from neighbouring phrases by time (the next phrase only if it doesn't open a new item with
+   "aur ye"/"ye"), colours come from each product's photo, a bare "hazaar" after an unknown word is
+   marked uncertain, and special tokens are stripped.
+4. **Final run: 4 of 5 spoken prices published correctly** (two with speech and vision agreeing), the
+   other two misheard prices became "which item is this?" questions listing the right item, the
+   tag/spoken conflict was flagged, the unpriced item was left out. **No wrong price was published
+   silently.** Cost **$0.09**, wall time **144 s** for 32 s of video (detect 77 s, segment 40 s,
+   backdrop 16 s, transcribe 10 s, the rest < 7 s).
+
+### Proposed pipeline (approved Oct 27; built as described, with the changes above)
 1. detect_products: Muse Spark 1.3 video, fps 2 → items, time ranges, best frame, box, tag text.
 2. transcribe: whole-file ENDPOINTING (Hindi + English bias) + pause spans + chunk alignment.
 3. match_prices: deterministic time alignment of parsed mentions to items; Spark 1b pairing as a

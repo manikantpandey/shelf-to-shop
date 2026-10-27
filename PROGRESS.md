@@ -21,6 +21,52 @@ worktree agents for engine/shelf/web code.
 
 ---
 
+## Session 3: Oct 27 evening (Day 3 pipeline pulled forward, on your go-ahead)
+
+Decisions taken with you: build the pipeline now on the synthetic clip and re-check on real clips;
+hosting = one India VPS (docker-compose + Caddy for HTTPS) with Cloudflare R2 for media; `claude.md`
+stays local (now gitignored); clips, Baseten key and phone results promised tonight.
+
+### Done
+- **Pipeline end to end** (`src/engine/pipeline/`): ingest → detect ∥ transcribe → segment → enrich
+  → match → verify → backgrounds, each stage cached by input hash (rerun resumes at the failed stage).
+- **Meta providers** (`src/engine/providers/meta.py`): Muse Spark vision-only listing, then a
+  separate pairing call keyed by on-screen time; whole-file ASR placed on the timeline by chunk ↔
+  pause-span alignment; SAM point prompts inside the Spark box with concept fallback, buffered SSE,
+  hole filling; Muse Image backdrop with a plain fallback. Fakes replay a labelled clip.
+- **Matcher + verifier**: time window ±4 s, colour words (Hindi/English, from the product photo),
+  direction words (agla/peeche), Spark's pairing as a second opinion; near-ties become questions.
+  Flags: missing, conflict (tag / vision / multiple), ambiguous, implausible outlier, uncertain
+  (bare "hazaar"), duplicate, weak mask.
+- **Publish**: public catalog JSON (no internal fields), Meta feed CSV, photo zip, wa.me links.
+- **CLI**: `uv run python -m shelf.cli process VIDEO --shop NAME --whatsapp NUMBER [--fake LABELS]`.
+- Real run on synth_a: 4/5 spoken prices right, the 2 misheard ones asked as questions, tag conflict
+  flagged, no silent wrong price; **$0.09 and 144 s per 32 s clip** (details in `spikes/RESULTS.md`).
+
+### Broken / risks
+- Detect is the slow stage (two Muse Spark video calls, ~77 s); segment ~40 s. Fine for a queue,
+  but the processing screen must say "a few minutes".
+- ASR quality on the TTS clip varies run to run; real seller speech still untested.
+- Baseten text path not built (no key yet); all text steps use Muse Spark.
+- Composite polish still pending (faint shadow, jagged one_bit edges).
+
+### Test results
+- `make check`: ruff, mypy strict (66 files), import-linter 2/2, **pytest 176 passed** (incl. an
+  offline end-to-end pipeline run with real ffmpeg, cached reruns, resume after failure, spend cap).
+
+### Next 3 tasks
+1. Re-run spikes 1–3 and the CLI on your real clips (tonight), then tune thresholds.
+2. Day 4 web vertical slice: demo login, upload, processing screen fed by `events.jsonl`, review with
+   flag resolution, publish, public shop page; jobs table + worker handler calling `Pipeline`.
+3. VPS deploy: docker-compose (api, worker, Postgres) + Caddy + R2; you'll need to create the VM and
+   R2 bucket and give me SSH access or run the commands I prepare.
+
+### Open questions
+1. Commerce Manager access for the Day 3 feed upload test (tomorrow).
+2. VPS provider/region and domain name for HTTPS.
+
+---
+
 ## Session 2: Oct 27 (Day 1 continued; Day 2 work pulled forward)
 
 ### Done
