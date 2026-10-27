@@ -57,3 +57,4 @@ Thumbs.db
 # Local project brief (kept out of the public repo)
 claude.md
 CLAUDE.md
+*.tsbuildinfo
