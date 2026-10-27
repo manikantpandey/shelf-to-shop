@@ -75,12 +75,13 @@ async def process(args: argparse.Namespace) -> int:
             await client.aclose()
 
     slug = args.slug or _slug(args.shop)
+    base_url = args.base_url or settings.public_base_url
     shop = ShopInfo(
         name=args.shop,
         slug=slug,
         whatsapp=args.whatsapp,
-        public_base_url=args.base_url,
-        media_base_url=f"{args.base_url.rstrip('/')}/media",
+        public_base_url=base_url,
+        media_base_url=f"{base_url.rstrip('/')}/media",
     )
     published = publish(shop, result.products, result.decisions, result.enriched,
                         result.images, out / "catalog")  # fmt: skip
@@ -113,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--whatsapp", required=True)
     p.add_argument("--slug")
     p.add_argument("--out", default="output/run")
-    p.add_argument("--base-url", default="https://shelf-to-shop.example")
+    p.add_argument("--base-url", help="public site URL (default: PUBLIC_BASE_URL setting)")
     p.add_argument("--fake", help="replay a labels JSON instead of calling models")
     p.add_argument("--no-ai-mark", action="store_true")
     args = parser.parse_args(argv)
