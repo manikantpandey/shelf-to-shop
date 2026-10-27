@@ -7,11 +7,17 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.20.1",
+  "fastapi>=0.162.0",
   "httpx>=0.28",
   "meta-sam-parser==0.1.0",
   "numpy>=2.1",
   "pillow>=11.0",
   "pydantic>=2.9",
+  "pydantic-settings>=2.16.1",
+  "sqlalchemy>=2.1.6",
+  "structlog>=26.1.0",
+  "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
@@ -19,6 +25,9 @@ dev = [
   "pytest>=8.3",
   "ruff>=0.17",
   "mypy>=1.13",
+  "hypothesis>=6.170.12",
+  "respx>=0.23.1",
+  "import-linter>=2.15",
 ]
 
 [build-system]
@@ -30,7 +39,8 @@ packages = ["src/engine", "src/shelf", "src/integrations"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --import-mode=importlib"
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100

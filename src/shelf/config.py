@@ -1,0 +1,87 @@
+"""Application settings, read from environment variables (and .env in development)."""
+
+from __future__ import annotations
+
+from decimal import Decimal
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import Field, SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from engine.config import EngineConfig, ModelIds, SpendCaps
+
+AppMode = Literal["standalone", "socialpulse"]
+Environment = Literal["dev", "test", "prod"]
+
+# Integration plugins are loaded by module path, so the core never imports them statically.
+INTEGRATION_PLUGINS: dict[str, str] = {"socialpulse": "integrations.socialpulse.plugin"}
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", frozen=True)
+
+    app_mode: AppMode = "standalone"
+    environment: Environment = "dev"
+    log_level: str = "INFO"
+
+    database_url: str = "sqlite:///./storage/shelf.db"
+    public_base_url: str = "http://localhost:5173"
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+
+    # Development-only shortcut for the Day 4 demo; refused in production.
+    demo_login_enabled: bool = False
+
+    providers: Literal["meta", "fake"] = "meta"
+    text_llm_provider: Literal["meta", "baseten"] = "meta"
+    meta_api_key: SecretStr | None = None
+    meta_api_base_url: str = "https://api.meta.ai/v1"
+    meta_vision_model: str = "muse-spark-1.3"
+    meta_segment_model: str = "sam-3.1"
+    meta_transcribe_model: str = "muse-voice-transcribe-1.0"
+    meta_image_model: str = "muse-image-1.0"
+    baseten_api_key: SecretStr | None = None
+    baseten_base_url: str = "https://inference.baseten.co/v1"
+    baseten_model_id: str = "meta-models/muse-spark-open"
+
+    spend_cap_per_job_usd: Decimal = Decimal("0.50")
+    spend_cap_per_workspace_day_usd: Decimal = Decimal("3.00")
+    spend_cap_per_instance_day_usd: Decimal = Decimal("25.00")
+
+    @model_validator(mode="after")
+    def check_production_safety(self) -> Settings:
+        if self.environment == "prod":
+            if self.demo_login_enabled:
+                raise ValueError("DEMO_LOGIN_ENABLED must be false in production")
+            if self.providers == "fake":
+                raise ValueError("PROVIDERS=fake is not allowed in production")
+        if self.demo_login_enabled and self.app_mode != "standalone":
+            raise ValueError("demo login is only available in standalone mode")
+        return self
+
+    def engine_config(self) -> EngineConfig:
+        return EngineConfig(
+            providers=self.providers,
+            text_provider=self.text_llm_provider,
+            meta_api_key=self.meta_api_key,
+            meta_base_url=self.meta_api_base_url,
+            baseten_api_key=self.baseten_api_key,
+            baseten_base_url=self.baseten_base_url,
+            models=ModelIds(
+                vision=self.meta_vision_model,
+                segment=self.meta_segment_model,
+                transcribe=self.meta_transcribe_model,
+                image=self.meta_image_model,
+                baseten_text=self.baseten_model_id,
+            ),
+            caps=SpendCaps(
+                per_job_usd=self.spend_cap_per_job_usd,
+                per_workspace_day_usd=self.spend_cap_per_workspace_day_usd,
+                per_instance_day_usd=self.spend_cap_per_instance_day_usd,
+            ),
+        )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

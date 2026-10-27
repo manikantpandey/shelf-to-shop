@@ -1,0 +1,19 @@
+[importlinter]
+root_packages =
+    engine
+    shelf
+    integrations
+
+[importlinter:contract:engine-standalone]
+name = engine is self-contained (no app or integration imports)
+type = forbidden
+source_modules = engine
+forbidden_modules =
+    shelf
+    integrations
+
+[importlinter:contract:core-without-integrations]
+name = core app never imports integrations (loaded by name from config)
+type = forbidden
+source_modules = shelf
+forbidden_modules = integrations
