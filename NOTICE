@@ -8,3 +8,12 @@ Third-party dependency with a non-Apache licence:
   is licensed by Meta Platforms, Inc. under the "SAM License". It is not included in this repository;
   it is installed as a dependency. Anyone redistributing it (for example inside a container image) must
   include a copy of that licence and comply with its terms.
+
+Fonts (self-hosted in the web app, SIL Open Font License 1.1):
+- Noto Sans and Noto Sans Devanagari, Copyright The Noto Project Authors.
+- Anek Devanagari, Copyright 2021 The Anek Project Authors (https://github.com/EkType/Anek).
+
+Pack photos from Open Food Facts (https://world.openfoodfacts.org) are fetched only when a seller
+picks one, and are licensed CC BY-SA 3.0 by Open Food Facts contributors. The credit and a link to
+the product page are shown on the shop page wherever such a photo is used. The licence covers the
+photo only; brand names and packaging designs belong to their owners.

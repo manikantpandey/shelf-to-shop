@@ -22,6 +22,63 @@ for engine/shelf/web code.
 
 ---
 
+## Session 6: Oct 27 night to Oct 28 (redesign, history, photos, sample shop)
+
+You rejected the first UI for the hackathon (looked like a form, no history, no laptop layout, colour-bar
+test images). Decided with you: **Bazaar bright** look, a home screen with shop stats + video history +
+all items + per-video run details, a full desktop layout, real clips as demo data, weak photos replaceable
+by an upload, a better moment from the video, or an **Open Food Facts** pack photo, and demo sign-in that
+gives each visitor a **private copy of a sample shop**.
+
+### Done
+- `docs/design-plan.md` revision 2 (written before the code): the shop's painted signboard as the one
+  bold element, marigold price tags, deep green board, Anek Devanagari display + Noto text, contrast
+  ratios computed, layouts for phone and laptop, review against the avoid list.
+- **Web app redesigned**: Home (share, what needs you, this week's visits and order taps, recent videos,
+  most ordered), Items (search, filters, sold out, item sheet with three ways to change a photo), Videos
+  and Video detail (each pipeline step with model, time and cost; what we heard; the frame and words
+  behind every price), Review, Record, Settings, sign-in with "Try the sample shop", public shop with a
+  page per product (the link the feed and WhatsApp messages use, which was missing before).
+- **Backend**: items across videos (edits republish the live shop), shop-wide publish, photo upload /
+  moment re-cut (SAM on the tapped point) / Open Food Facts (barcode or name, fixed hosts, URLs built
+  server-side, CC BY-SA credit on the shop page), view and order-tap counters (totals only), video
+  history and run details, sample-shop copies, `scripts/seed_demo.py`.
+- **Real sample shop** from your three clips with the real models ($0.31): 13/13 automatic prices match
+  your confirmed labels; the Mirinda can came out without a price and is a real "Fix prices" question.
+- **Bugs found and fixed**:
+  - The Meta feed's `image_link` repeated the shop slug, so every feed photo would have 404'd.
+  - Items with category "other" crashed publishing.
+  - Database commits ran *after* the response was sent, so a fast client could miss what it had just
+    written (sign-in then `/me` gave 401). Now committed first, and a regression test proves it.
+  - Timestamps were sent without a timezone (5.5 hours off in India).
+  - The seed stored a WhatsApp number without its country code.
+
+### Broken / risks
+- Some cut-outs are still poor (a hand instead of a bottle, fragmentary Pepsi bottle): the new photo
+  options fix them per item, but segmentation quality itself is unchanged.
+- Daily spend caps, rate limits, resumable uploads, data export/delete and the retention sweeper are
+  still open (Day 5 and Day 7 work).
+- Not deployed yet; the sample shop must be seeded on the server (runbook 1.4).
+- Public counters can be inflated by anyone calling the endpoint (totals only, no personal data).
+
+### Test results
+- `make check`: ruff, mypy strict (82 files), import-linter 2/2, pytest **209 passed**.
+- Web: `tsc` clean, vitest 7 passed, production build OK; Playwright journey **1 passed** (sign in, setup,
+  record, fix prices, publish, home, sold out, run details, public shop, product page, Hindi).
+- Screenshots of every screen at 360×800 and 1440×900 in `docs/screenshots/` (critiqued and fixed).
+
+### Next 3 tasks
+1. You deploy (runbook 1.1-1.4); then the Commerce Manager feed test.
+2. Day 5 hardening: rate limits (incl. the public counter), resumable uploads with IndexedDB keep,
+   DB spend ledger for daily caps, refresh rotation, recorder component tests.
+3. Data export/delete + retention sweeper; README with screenshots and the eval table.
+
+### Needed from you
+- A WhatsApp number for the sample shop's order button on the deployed demo.
+- AWS deploy steps; Baseten key; spike 5 phone results.
+
+---
+
 ## Session 5: Oct 27 late (Day 4 web slice and deploy kit, pulled forward)
 
 ### Done

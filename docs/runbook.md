@@ -40,6 +40,28 @@ points at the machine (it retries until then). Then open https://shop.shankhyaai
 
 The machine needs 3-5 minutes after creation to install Docker and build the images.
 
+### 1.4 The sample shop for demo sign-in (optional, about 10 minutes)
+"Try the sample shop" on the sign-in page gives each visitor a private copy of a shop built from real
+shelf videos. Build it once on the server, from videos you own:
+
+1. S3 console (any bucket you own) → upload the clips → select each → **Actions → Share with a presigned
+   URL** (1 hour).
+2. In the Session Manager shell, download them and run the seed script inside the API container. It runs
+   every clip through the real models (about $0.10 per 30-second clip), publishes the first two and
+   leaves the last one waiting for review, so the demo can show "Fix prices":
+   ```sh
+   cd /opt/shelf/deploy
+   sudo mkdir -p /opt/seed && cd /opt/seed
+   sudo curl -o a.mp4 "PRESIGNED_URL_1"   # repeat for b.mp4, c.mp4
+   cd /opt/shelf/deploy
+   for f in a b c; do sudo docker compose -f compose.prod.yml cp /opt/seed/$f.mp4 api:/tmp/$f.mp4; done
+   sudo docker compose -f compose.prod.yml exec api python scripts/seed_demo.py      --name "Sharma General Store" --whatsapp "YOUR NUMBER" --publish 2 /tmp/a.mp4 /tmp/b.mp4 /tmp/c.mp4
+   ```
+3. Delete the clips from S3 and `/opt/seed` afterwards. Rerun with `--reset` to rebuild the sample shop.
+
+The WhatsApp number is where "Order on WhatsApp" taps in every copy of the sample shop go, so use a
+number you are happy to receive test orders on. The sample shop itself is never public; only copies are.
+
 ## 2. Day-to-day
 
 Open a shell: CloudFormation **Outputs → SessionManager** link (or EC2 → instance → Connect → Session Manager).
