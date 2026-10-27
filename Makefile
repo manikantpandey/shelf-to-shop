@@ -1,10 +1,11 @@
 # Shelf-to-Shop developer commands. Recipes are plain uv/pre-commit calls so they run under
 # GNU make on Linux, macOS and Windows (ezwinports make or Git Bash).
 
-.PHONY: help setup lint fmt test check api worker web web-test e2e spike-auth spike-4 spike-5
+.PHONY: help setup dev dev-down lint fmt test check api worker web web-test e2e spike-auth spike-4 spike-5
 
 help:
 	@echo "setup       install Python deps and git hooks"
+	@echo "dev         run Postgres, API and web app in Docker (http://localhost:5173)"
 	@echo "lint        ruff, mypy and module-boundary checks"
 	@echo "api         run the API locally on http://localhost:8000"
 	@echo "worker      run the job worker (or set WORKER_INLINE=true for the API)"
@@ -21,6 +22,12 @@ help:
 setup:
 	uv sync
 	pre-commit install --hook-type pre-commit --hook-type commit-msg
+
+dev:
+	docker compose -f deploy/compose.dev.yml up --build
+
+dev-down:
+	docker compose -f deploy/compose.dev.yml down
 
 lint:
 	uv run ruff check .
