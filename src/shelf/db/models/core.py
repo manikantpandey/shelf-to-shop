@@ -6,7 +6,7 @@ Every row that belongs to a seller carries `workspace_id`; queries always filter
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import JSON, ForeignKey, Index, String, Text, UniqueConstraint
@@ -34,6 +34,8 @@ class Workspace(IdMixin, TimestampMixin, Base):
     raw_retention_days: Mapped[int] = mapped_column(default=7)
     consent_account_at: Mapped[datetime | None] = mapped_column(default=None)
     consent_recording_at: Mapped[datetime | None] = mapped_column(default=None)
+    # The sample shop that demo sign-ins copy; nobody signs into it.
+    is_template: Mapped[bool] = mapped_column(default=False)
 
 
 class SessionRow(IdMixin, TimestampMixin, Base):
@@ -97,6 +99,14 @@ class Product(IdMixin, TimestampMixin, Base):
     pattern: Mapped[str | None] = mapped_column(String(60), default=None)
     image_key: Mapped[str | None] = mapped_column(String(300), default=None)
     ai_background: Mapped[bool] = mapped_column(default=False)
+    # video (the pipeline's cut-out) | frame (seller picked another moment) | upload | openfoodfacts
+    image_source: Mapped[str] = mapped_column(String(20), default="video")
+    image_credit: Mapped[str | None] = mapped_column(String(200), default=None)
+    image_credit_url: Mapped[str | None] = mapped_column(String(300), default=None)
+    first_seen_s: Mapped[float | None] = mapped_column(default=None)
+    last_seen_s: Mapped[float | None] = mapped_column(default=None)
+    best_frame_s: Mapped[float | None] = mapped_column(default=None)
+    sold_out: Mapped[bool] = mapped_column(default=False)
     removed: Mapped[bool] = mapped_column(default=False)
 
 
@@ -126,6 +136,19 @@ class Catalog(IdMixin, TimestampMixin, Base):
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSON)
     folder_key: Mapped[str] = mapped_column(String(300))
     approved_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+
+class ShopCounter(IdMixin, Base):
+    """Daily totals of shop page views and "Order on WhatsApp" taps; no visitor data is kept."""
+
+    __tablename__ = "shop_counters"
+    __table_args__ = (UniqueConstraint("workspace_id", "day", "kind", "item_id"),)
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"))
+    day: Mapped[date]
+    kind: Mapped[str] = mapped_column(String(10))  # view | order
+    item_id: Mapped[str] = mapped_column(String(80), default="")  # "" for page views
+    count: Mapped[int] = mapped_column(default=0)
 
 
 class AuditEvent(IdMixin, TimestampMixin, Base):

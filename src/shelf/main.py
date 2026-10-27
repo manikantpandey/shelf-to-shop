@@ -13,7 +13,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shelf.api.v1 import health, public, seller
+from shelf.api.v1 import health, insights, items, public, seller
+from shelf.catalog.openfoodfacts import OpenFoodFacts
 from shelf.config import Settings, get_settings
 from shelf.core.errors import install_error_handlers
 from shelf.core.logging import configure_logging, get_logger
@@ -43,6 +44,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         if worker is not None:
             worker.stop()
+        if app.state.openfoodfacts is not None:
+            await app.state.openfoodfacts.aclose()
 
     is_prod = settings.environment == "prod"
     app = FastAPI(
@@ -58,6 +61,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.db_engine = engine
     app.state.session_factory = make_session_factory(engine)
     app.state.storage = LocalStorage(Path(settings.storage_dir))
+    app.state.openfoodfacts = (
+        OpenFoodFacts(settings.openfoodfacts_user_agent) if settings.openfoodfacts_enabled else None
+    )
 
     install_error_handlers(app)
     app.add_middleware(
@@ -71,6 +77,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(seller.router, prefix=API_PREFIX)
+    app.include_router(items.router, prefix=API_PREFIX)
+    app.include_router(insights.router, prefix=API_PREFIX)
     app.include_router(public.router, prefix=API_PREFIX)
 
     plugin = load_integration(app, settings)

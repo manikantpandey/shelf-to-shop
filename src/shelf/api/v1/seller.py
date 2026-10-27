@@ -27,6 +27,7 @@ from shelf.auth.sessions import SellerDep, end_session, start_session
 from shelf.catalog.publish import publish_job
 from shelf.core.errors import AppError
 from shelf.db.models import AuditEvent, Catalog, FlagRow, Job, Product, Upload, User, Workspace
+from shelf.demo import clone_template, find_template
 from shelf.jobs.service import create_job, open_flag_count, pending_task_exists, retry_job
 from shelf.storage import LocalStorage
 
@@ -47,9 +48,14 @@ def _storage(request: Request) -> LocalStorage:
 
 
 def _audit(
-    db: Session, seller_ws: uuid.UUID | None, actor: str, action: str, target: str | None = None
+    db: Session,
+    seller_ws: uuid.UUID | None,
+    actor: str,
+    action: str,
+    target: str | None = None,
+    **meta: Any,
 ) -> None:
-    db.add(AuditEvent(workspace_id=seller_ws, actor=actor, action=action, target=target))
+    db.add(AuditEvent(workspace_id=seller_ws, actor=actor, action=action, target=target, meta=meta))
 
 
 def _slugify(name: str) -> str:
@@ -71,28 +77,42 @@ def workspace_out(ws: Workspace) -> dict[str, Any]:
 
 # --- Sign-in ----------------------------------------------------------------------------
 class DemoLogin(BaseModel):
-    shop_name: str = Field(min_length=2, max_length=80)
+    shop_name: str | None = Field(default=None, min_length=2, max_length=80)
+    # Start from a private copy of the sample shop instead of an empty one.
+    sample: bool = False
 
 
-@router.post("/auth/demo", tags=["auth"])
-def demo_login(
-    body: DemoLogin, response: Response, db: SessionDep, settings: SettingsDep
-) -> dict[str, Any]:
-    if not settings.demo_login_enabled:
-        raise AppError("not_available", "Demo sign-in is switched off.", status=404)
-    name = body.shop_name.strip()
-    user = User(display_name=name)
-    db.add(user)
-    db.flush()
+def _free_slug(db: Session, name: str) -> str:
     base = _slugify(name)
     slug = base
     while db.scalar(select(Workspace.id).where(Workspace.slug == slug)) is not None:
         slug = f"{base}-{secrets.token_hex(2)}"
-    ws = Workspace(owner_id=user.id, name=name, slug=slug)
-    db.add(ws)
+    return slug
+
+
+@router.post("/auth/demo", tags=["auth"])
+def demo_login(
+    body: DemoLogin, request: Request, response: Response, db: SessionDep, settings: SettingsDep
+) -> dict[str, Any]:
+    if not settings.demo_login_enabled:
+        raise AppError("not_available", "Demo sign-in is switched off.", status=404)
+    template = find_template(db) if body.sample else None
+    if body.sample and template is None:
+        raise AppError("no_sample", "The sample shop is not set up yet.", status=404)
+    if template is None and not (body.shop_name or "").strip():
+        raise AppError("name_required", "Enter your shop name.", status=422)
+    name = template.name if template is not None else (body.shop_name or "").strip()
+    user = User(display_name=name)
+    db.add(user)
     db.flush()
+    if template is not None:
+        ws = clone_template(db, settings, _storage(request), template, user, _free_slug(db, name))
+    else:
+        ws = Workspace(owner_id=user.id, name=name, slug=_free_slug(db, name))
+        db.add(ws)
+        db.flush()
     row = start_session(db, settings, user, response)
-    _audit(db, ws.id, f"user:{user.id}", "auth.demo_login")
+    _audit(db, ws.id, f"user:{user.id}", "auth.demo_login", sample=template is not None)
     # The CSRF token also travels in the body so a client on another origin (a future Android
     # shell) can send it; CORS keeps other sites from reading this response.
     return {"workspace": workspace_out(ws), "csrf_token": row.csrf_token}

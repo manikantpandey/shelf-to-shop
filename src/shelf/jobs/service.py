@@ -39,7 +39,9 @@ STAGE_ORDER = [
 ]
 
 
-def create_job(db: Session, workspace: Workspace, upload: Upload, actor: str) -> Job:
+def create_job(
+    db: Session, workspace: Workspace, upload: Upload, actor: str, *, enqueue: bool = True
+) -> Job:
     job_id = uuid7()
     job = Job(
         id=job_id,
@@ -50,8 +52,10 @@ def create_job(db: Session, workspace: Workspace, upload: Upload, actor: str) ->
     )
     db.add(job)
     db.flush()
-    # Same transaction as the job row: a job can never exist without its task.
-    queue.enqueue(db, PIPELINE_TASK, {"job_id": str(job.id)})
+    # Same transaction as the job row: a job can never exist without its task. (The demo seed
+    # script runs the pipeline itself and passes enqueue=False.)
+    if enqueue:
+        queue.enqueue(db, PIPELINE_TASK, {"job_id": str(job.id)})
     db.add(
         AuditEvent(workspace_id=workspace.id, actor=actor, action="job.created", target=str(job.id))
     )
@@ -70,7 +74,9 @@ def retry_job(db: Session, job: Job, actor: str) -> None:
     )
 
 
-class _Tee(MemoryRunLog):
+class TeeRunLog(MemoryRunLog):
+    """Keeps entries in memory (to total the cost) and appends them to the job's run log."""
+
     def __init__(self, jsonl: JsonlRunLog) -> None:
         super().__init__()
         self.jsonl = jsonl
@@ -80,7 +86,7 @@ class _Tee(MemoryRunLog):
         self.jsonl.record(entry)
 
 
-def _providers(settings: Settings) -> tuple[Providers, MetaClient | None]:
+def providers_for(settings: Settings) -> tuple[Providers, MetaClient | None]:
     if settings.providers == "fake":
         return fake_providers(Scenario.load(Path(settings.fake_scenario))), None
     return meta_providers(settings.engine_config())
@@ -120,14 +126,14 @@ def run_pipeline_job(
             if row is not None:
                 row.stages = {**row.stages, event.stage: event.status}
 
-    log = _Tee(JsonlRunLog(work / "runlog.jsonl"))
+    log = TeeRunLog(JsonlRunLog(work / "runlog.jsonl"))
     ctx = CallContext(
         job_id=job_id,
         workspace_id=workspace_id,
         ledger=InMemorySpendLedger(settings.engine_config().caps),
         runlog=log,
     )
-    providers, client = _providers(settings)
+    providers, client = providers_for(settings)
 
     async def go() -> RunResult:
         try:
@@ -202,6 +208,9 @@ def _save_review(db: Session, job: Job, result: RunResult, storage: LocalStorage
                 pattern=e.pattern if e else None,
                 image_key=image_key,
                 ai_background=img.ai_background if img else False,
+                first_seen_s=p.first_seen_s,
+                last_seen_s=p.last_seen_s,
+                best_frame_s=p.best_frame_s,
             )
         )
     for f in result.flags:

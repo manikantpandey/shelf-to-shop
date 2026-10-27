@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     baseten_base_url: str = "https://inference.baseten.co/v1"
     baseten_model_id: str = "meta-models/muse-spark-open"
 
+    # Open Food Facts asks callers to identify themselves: "AppName/Version (contact)".
+    openfoodfacts_enabled: bool = True
+    openfoodfacts_user_agent: str = (
+        "ShelfToShop/0.1 (https://github.com/manikantpandey/shelf-to-shop)"
+    )
+
     spend_cap_per_job_usd: Decimal = Decimal("0.50")
     spend_cap_per_workspace_day_usd: Decimal = Decimal("3.00")
     spend_cap_per_instance_day_usd: Decimal = Decimal("25.00")
