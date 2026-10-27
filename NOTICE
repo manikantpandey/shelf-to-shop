@@ -10,8 +10,7 @@ Third-party dependency with a non-Apache licence:
   include a copy of that licence and comply with its terms.
 
 Fonts (self-hosted in the web app, SIL Open Font License 1.1):
-- Noto Sans and Noto Sans Devanagari, Copyright The Noto Project Authors.
-- Anek Devanagari, Copyright 2021 The Anek Project Authors (https://github.com/EkType/Anek).
+- Poppins, Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins).
 
 Pack photos from Open Food Facts (https://world.openfoodfacts.org) are fetched only when a seller
 picks one, and are licensed CC BY-SA 3.0 by Open Food Facts contributors. The credit and a link to

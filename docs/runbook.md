@@ -55,7 +55,7 @@ shelf videos. Build it once on the server, from videos you own:
    sudo curl -o a.mp4 "PRESIGNED_URL_1"   # repeat for b.mp4, c.mp4
    cd /opt/shelf/deploy
    for f in a b c; do sudo docker compose -f compose.prod.yml cp /opt/seed/$f.mp4 api:/tmp/$f.mp4; done
-   sudo docker compose -f compose.prod.yml exec api python scripts/seed_demo.py      --name "Sharma General Store" --whatsapp "YOUR NUMBER" --publish 2 /tmp/a.mp4 /tmp/b.mp4 /tmp/c.mp4
+   sudo docker compose -f compose.prod.yml exec api python scripts/seed_demo.py      --name "Sharma General Store" --whatsapp "YOUR NUMBER" --publish 2      --hours "8 am to 10 pm" --delivery both --delivery-note "Free home delivery within 2 km"      --min-order 100 --about "Your neighbourhood kirana for snacks, cold drinks and daily needs."      --notice "Diwali offer: Haldiram's packs at ₹4" /tmp/a.mp4 /tmp/b.mp4 /tmp/c.mp4
    ```
 3. Delete the clips from S3 and `/opt/seed` afterwards. Rerun with `--reset` to rebuild the sample shop.
 

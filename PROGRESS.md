@@ -22,6 +22,56 @@ for engine/shelf/web code.
 
 ---
 
+## Session 7: Oct 28 (shop management, basket orders, Poppins; recording bug)
+
+You tried the app as a new shop: the upload went back to the record screen, and you asked for a product that a
+shopkeeper can run, with management options and a better font. Decided with you (all options taken): stock and
+price tools, shop profile, sections, offers and MRP, basket orders, an order book, QR poster and Status
+picture, search on the shop page, Poppins, and your number for demo orders.
+
+### Done
+- **Recording bug (critical)**: Chrome's in-app recorder writes WebM files without a duration in the header,
+  so every in-app recording was rejected as "0.0 s, too short". The duration is now measured from the video
+  packets. Verified on a real Chrome recording (accepted, 3.99 s, converted to MP4 with audio); test added.
+- Setup screen on laptops had the sidebar's green painted behind it; fixed.
+- **Shop management**: sold-out switch on every item, select many items (sold out, in stock, hide, show,
+  change price by ₹ or %, move to a section, remove; the shop republishes once), add an item by hand, MRP
+  (struck through on the shop page; `price`/`sale_price` in the Meta feed), pin to top, hide from shop.
+- **Sections** made from item categories (Snacks, Cold drinks, ...), renamed in English and Hindi,
+  reordered, added and deleted (items move, nothing is lost).
+- **Shop profile**: hours, address, pickup or delivery, delivery note, minimum order, UPI ID, shop photo, about,
+  offer strip; shown live on the shop page.
+- **Basket orders**: customers add items with quantities and send one numbered WhatsApp message with the
+  total. The server prices the basket from the published shop (the browser's prices are ignored), strips links
+  from the name and note, refuses sold-out or removed items, and records the order.
+- **Order book**: new, packed, delivered, cancelled, paid; today's orders, sales and payments; a new-order
+  badge in the navigation; Home leads with "new order waiting".
+- **Share kit**: QR code, printable counter poster, WhatsApp Status picture of any item (1080x1920 with the
+  price tag and a QR code), loaded on demand so the shop page stays light.
+- **Poppins** everywhere (Indian Type Foundry, OFL) replacing Anek and Noto; navigation reworked (phone: Home,
+  Items, Record, Orders, More).
+- Design plan revision 3; NOTICE updated (Poppins, qrcode is MIT via npm).
+
+### Broken / risks
+- The public order endpoint has no rate limit yet: anyone can create junk orders (Day 5 hardening).
+- Orders hold a customer's name and note (personal data): needs a retention rule and a line in privacy.md.
+- Daily spend caps, resumable uploads, data export/delete still open.
+
+### Test results
+- `make check`: ruff, mypy strict (84 files), import-linter 2/2, pytest **215 passed**.
+- Web: `tsc` clean, vitest 7 passed, build OK (main bundle 449 kB, share kit split out).
+- Playwright journey **1 passed**: sign in, setup, record, fix prices, publish, sold out, run details, basket
+  order to WhatsApp, order book, product page, Hindi.
+- 31 screenshots at 360×800 and 1440×900 in `docs/screenshots/`, reviewed and fixed (a CSS class clash
+  had put a box around every Add button; Home now shows orders first; clearer bulk price buttons).
+
+### Next 3 tasks
+1. Deploy (runbook 1.1-1.4), with the sample shop using your number.
+2. Rate limits (public orders and counters first), order retention, privacy.md and security.md.
+3. Resumable uploads with IndexedDB keep; README with screenshots and the eval table.
+
+---
+
 ## Session 6: Oct 27 night to Oct 28 (redesign, history, photos, sample shop)
 
 You rejected the first UI for the hackathon (looked like a form, no history, no laptop layout, colour-bar
