@@ -22,4 +22,7 @@ def get_session(request: Request) -> Iterator[Session]:
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
-SessionDep = Annotated[Session, Depends(get_session)]
+# scope="function": the session commits when the endpoint returns, before the response is sent.
+# With the default request scope the commit ran after the client already had its answer, so a
+# fast follow-up request (sign in, then /me) could miss rows the first one had just written.
+SessionDep = Annotated[Session, Depends(get_session, scope="function")]

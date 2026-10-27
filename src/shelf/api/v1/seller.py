@@ -25,6 +25,7 @@ from engine.prices.inr import format_inr
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import SellerDep, end_session, start_session
 from shelf.catalog.publish import publish_job
+from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import AuditEvent, Catalog, FlagRow, Job, Product, Upload, User, Workspace
 from shelf.demo import clone_template, find_template
@@ -254,7 +255,7 @@ def job_out(job: Job, open_flags: int = 0) -> dict[str, Any]:
         "error_code": job.error_code,
         "error_message": job.error_message,
         "open_flags": open_flags,
-        "created_at": job.created_at.isoformat(),
+        "created_at": iso_utc(job.created_at),
     }
 
 
@@ -478,7 +479,7 @@ def my_catalog(
         "published": True,
         "version": latest.version,
         "versions": count,
-        "published_at": latest.created_at.isoformat(),
+        "published_at": iso_utc(latest.created_at),
         "items": len(latest.snapshot.get("products", [])),
         "url": f"{settings.public_base_url}/s/{seller.workspace.slug}",
         "feed_url": "/api/v1/catalog/feed.csv" if report.get("feed", True) else None,

@@ -7,11 +7,12 @@ did what, how long it took, what it cost, and the evidence behind every price.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import SellerDep
 from shelf.catalog.publish import item_id, live_products
+from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import Catalog, FlagRow, Job, Product, ShopCounter, Upload, Workspace
 from shelf.jobs.service import STAGE_ORDER
@@ -47,6 +49,28 @@ def _job(db: Session, workspace: Workspace, job_id: uuid.UUID) -> Job:
     if job is None:
         raise AppError("not_found", "That video does not exist.", status=404)
     return job
+
+
+_FRAME_NAME = re.compile(r"^frame_\d{2}_\d\.jpg$")
+
+
+def cut_frames(work: Path) -> dict[int, Path]:
+    """The video frame each item's photo was cut from (by file name; paths may point elsewhere
+    when the job was copied from the sample shop)."""
+    seg = work / "work" / "segment"
+    found: dict[int, Path] = {}
+    try:
+        doc = json.loads((work / "work" / "stages" / "segment.json").read_text(encoding="utf-8"))
+        for cut in doc.get("output", {}).get("cutouts", []):
+            name = PureWindowsPath(str(cut.get("frame", ""))).name
+            if _FRAME_NAME.match(name) and (seg / name).exists():
+                found[int(cut["product_idx"])] = seg / name
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    for path in sorted(seg.glob("frame_*_0.jpg")) if seg.exists() else []:
+        idx = int(path.name[6:8])
+        found.setdefault(idx, path)
+    return found
 
 
 @router.get("/stats", tags=["insights"])
@@ -103,7 +127,7 @@ def stats(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str,
         "questions_open": open_flags or 0,
         "spend_usd": str(sum((Decimal(j.cost_usd) for j in jobs), Decimal(0))),
         "shop_url": f"{settings.public_base_url}/s/{ws.slug}" if latest else None,
-        "published_at": latest.created_at.isoformat() if latest else None,
+        "published_at": iso_utc(latest.created_at) if latest else None,
     }
 
 
@@ -133,7 +157,7 @@ def video_history(seller: SellerDep, db: SessionDep) -> dict[str, Any]:
             {
                 "id": str(job.id),
                 "status": job.status,
-                "created_at": job.created_at.isoformat(),
+                "created_at": iso_utc(job.created_at),
                 "duration_s": round(upload.duration_s, 1) if upload else None,
                 "items": len(products),
                 "titles": [p.title_en for p in products[:3]],
@@ -229,10 +253,11 @@ def job_details(
         select(Product).where(Product.job_id == job.id).order_by(Product.idx)
     ).all()
     upload = db.get(Upload, job.upload_id)
+    frames = cut_frames(work)
     return {
         "id": str(job.id),
         "status": job.status,
-        "created_at": job.created_at.isoformat(),
+        "created_at": iso_utc(job.created_at),
         "duration_s": round(upload.duration_s, 1) if upload else None,
         "total_seconds": total_s,
         "cost_usd": job.cost_usd,
@@ -251,9 +276,7 @@ def job_details(
                 "last_seen_s": p.last_seen_s,
                 "evidence": p.evidence,
                 "image_url": f"/api/v1/jobs/{job.id}/images/{p.idx}" if p.image_key else None,
-                "frame_url": f"/api/v1/jobs/{job.id}/frames/{p.idx}"
-                if (work / "work" / "segment" / f"frame_{p.idx:02d}.jpg").exists()
-                else None,
+                "frame_url": f"/api/v1/jobs/{job.id}/frames/{p.idx}" if p.idx in frames else None,
             }
             for p in products
         ],
@@ -265,10 +288,8 @@ def job_frame(
     job_id: uuid.UUID, idx: int, request: Request, seller: SellerDep, db: SessionDep
 ) -> FileResponse:
     job = _job(db, seller.workspace, job_id)
-    if not 0 < idx < 100:
-        raise AppError("not_found", "Frame not found.", status=404)
-    path = _storage(request).path(f"{job.work_key}/work/segment/frame_{idx:02d}.jpg")
-    if not path.exists():
+    path = cut_frames(_storage(request).path(job.work_key)).get(idx)
+    if path is None:
         raise AppError("not_found", "Frame not found.", status=404)
     return FileResponse(
         path, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=300"}

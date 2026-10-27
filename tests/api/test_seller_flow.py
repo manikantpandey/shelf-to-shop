@@ -132,3 +132,26 @@ def test_demo_login_can_be_switched_off(app_settings: Settings) -> None:
     app = create_app(app_settings.model_copy(update={"demo_login_enabled": False}))
     with TestClient(app) as c:
         assert c.post("/api/v1/auth/demo", json={"shop_name": "X shop"}).status_code == 404
+
+
+def test_writes_are_committed_before_the_response_is_sent(app_settings: Settings) -> None:
+    """A client that calls /me the moment sign-in answers must find its session."""
+    from sqlalchemy import func, select
+
+    from shelf.db.models import SessionRow
+
+    app = create_app(app_settings)
+    seen: list[int] = []
+
+    async def watching(scope: Any, receive: Any, send: Any) -> None:
+        async def spy(message: dict[str, Any]) -> None:
+            if message["type"] == "http.response.start" and scope["path"].endswith("/auth/demo"):
+                with app.state.session_factory() as db:
+                    seen.append(db.scalar(select(func.count()).select_from(SessionRow)) or 0)
+            await send(message)
+
+        await app(scope, receive, spy)
+
+    with TestClient(app), TestClient(watching) as c:  # type: ignore[arg-type]
+        assert c.post("/api/v1/auth/demo", json={"shop_name": "Fast Client"}).status_code == 200
+    assert seen == [1]

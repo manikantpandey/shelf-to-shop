@@ -63,6 +63,11 @@ def image_url_ok(url: str) -> bool:
     )
 
 
+def thumb_size(url: str) -> str:
+    """The documented 200 px version, for the picker grid."""
+    return re.sub(r"\.(?:100|400|full)\.jpg$", ".200.jpg", url)
+
+
 def full_size(url: str) -> str:
     """The documented full-size name of a selected image (`front_en.4.400.jpg` -> `.full.jpg`)."""
     return re.sub(r"\.(?:100|200|400)\.jpg$", ".full.jpg", url)

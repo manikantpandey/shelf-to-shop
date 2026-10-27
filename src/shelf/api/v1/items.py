@@ -28,9 +28,16 @@ from engine.runlog import CallContext, JsonlRunLog
 from engine.spend import InMemorySpendLedger, SpendCapExceededError
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import Seller, SellerDep
-from shelf.catalog.openfoodfacts import CREDIT, OpenFoodFacts, SearchBusyError, valid_barcode
+from shelf.catalog.openfoodfacts import (
+    CREDIT,
+    OpenFoodFacts,
+    SearchBusyError,
+    thumb_size,
+    valid_barcode,
+)
 from shelf.catalog.publish import item_id, publish_shop
 from shelf.config import Settings
+from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import AuditEvent, FlagRow, Job, Product, Upload
 from shelf.jobs.service import TeeRunLog, providers_for
@@ -81,7 +88,9 @@ def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
         "price_inr": p.price_inr,
         "price_display": format_inr(p.price_inr * 100) if p.price_inr is not None else None,
         "sold_out": p.sold_out,
-        "live": job.status == "published",
+        # On the shop page: the video is published and the item has a price and a photo.
+        "live": job.status == "published" and p.price_inr is not None and p.image_key is not None,
+        "published": job.status == "published",
         "category": p.category,
         "brand": p.brand,
         # The version query string makes the browser fetch a replaced photo.
@@ -89,7 +98,7 @@ def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
         "image_source": p.image_source,
         "image_credit": p.image_credit,
         "ai_background": p.ai_background,
-        "added_at": job.created_at.isoformat(),
+        "added_at": iso_utc(job.created_at),
     }
 
 
@@ -362,7 +371,7 @@ async def search_pack_photos(
         ) from exc
     return {
         "results": [
-            {"code": r.code, "name": r.name, "brand": r.brand, "image_url": r.image_url}
+            {"code": r.code, "name": r.name, "brand": r.brand, "image_url": thumb_size(r.image_url)}
             for r in found
         ],
         "credit": CREDIT,

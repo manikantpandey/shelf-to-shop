@@ -219,6 +219,8 @@ def test_shop_stats_count_views_and_order_taps(
     assert [s["stage"] for s in details["stages"]][:2] == ["ingest", "detect"]
     assert sum(s["calls"] for s in details["stages"]) > 0
     assert details["items"][0]["evidence"]
+    frame = c.get(details["items"][0]["frame_url"])
+    assert frame.status_code == 200 and frame.headers["content-type"] == "image/jpeg"
 
 
 def test_new_endpoints_are_scoped_to_the_workspace(app_settings: Settings, clip: bytes) -> None:

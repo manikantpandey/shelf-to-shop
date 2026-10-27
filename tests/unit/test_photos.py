@@ -14,6 +14,7 @@ from shelf.catalog.openfoodfacts import (
     full_size,
     image_url_ok,
     rank,
+    thumb_size,
     valid_barcode,
 )
 
@@ -60,6 +61,7 @@ def test_open_food_facts_guards() -> None:
     )
     assert image_url_ok(IMG)
     assert full_size(IMG).endswith("front_en.7.full.jpg") and image_url_ok(full_size(IMG))
+    assert thumb_size(IMG).endswith("front_en.7.200.jpg") and image_url_ok(thumb_size(IMG))
     for bad in (
         IMG.replace("https://", "http://"),
         IMG.replace("images.openfoodfacts.org", "evil.example"),

@@ -23,6 +23,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 
+from engine.export.whatsapp import normalise_number
 from engine.media.probe import MediaRejectedError, MediaRules, probe, sniff_container
 from shelf.catalog.publish import publish_job
 from shelf.config import get_settings
@@ -71,7 +72,7 @@ def main() -> int:
             owner_id=new_user.id,
             name=args.name,
             slug=f"sample-{uuid.uuid4().hex[:8]}",
-            whatsapp="".join(ch for ch in args.whatsapp if ch.isdigit()) or None,
+            whatsapp=normalise_number(args.whatsapp),
             is_template=True,
             consent_account_at=now,
             consent_recording_at=now,
