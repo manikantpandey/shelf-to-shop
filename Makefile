@@ -1,12 +1,16 @@
 # Shelf-to-Shop developer commands. Recipes are plain uv/pre-commit calls so they run under
 # GNU make on Linux, macOS and Windows (ezwinports make or Git Bash).
 
-.PHONY: help setup lint fmt test check api spike-auth spike-4 spike-5
+.PHONY: help setup lint fmt test check api worker web web-test e2e spike-auth spike-4 spike-5
 
 help:
 	@echo "setup       install Python deps and git hooks"
 	@echo "lint        ruff, mypy and module-boundary checks"
 	@echo "api         run the API locally on http://localhost:8000"
+	@echo "worker      run the job worker (or set WORKER_INLINE=true for the API)"
+	@echo "web         run the web app on http://localhost:5173"
+	@echo "web-test    web typecheck and unit tests"
+	@echo "e2e         browser test of the whole seller journey (fake providers)"
 	@echo "fmt         apply ruff fixes and formatting"
 	@echo "test        run the Python test suite"
 	@echo "check       lint + test"
@@ -34,7 +38,20 @@ test:
 check: lint test
 
 api:
+	uv run alembic upgrade head
 	uv run uvicorn --factory shelf.main:create_app --reload --port 8000
+
+worker:
+	uv run python -m shelf.jobs.worker
+
+web:
+	cd web && npx vite --port 5173
+
+web-test:
+	cd web && npx tsc --noEmit && npx vitest run
+
+e2e:
+	cd web && npx playwright test
 
 spike-auth:
 	uv run python spikes/00_auth_check.py
