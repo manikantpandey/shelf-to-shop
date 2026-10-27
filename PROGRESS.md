@@ -61,17 +61,22 @@ stays local (now gitignored); clips, Baseten key and phone results promised toni
 3. VPS deploy: docker-compose (api, worker, Postgres) + Caddy + R2; you'll need to create the VM and
    R2 bucket and give me SSH access or run the commands I prepare.
 
-### Decided after the session
-- VPS: DigitalOcean Bangalore (BLR1), 2 vCPU / 4 GB. HTTPS on your own domain (you add an A record).
-- Setup: I write `deploy/` (docker-compose, Caddyfile, bootstrap script, runbook); you create the
-  droplet and run it over SSH. No server credentials are shared.
-- Feed test: I prepare the CSV and a Commerce Manager click-path; you upload and paste back the result.
-  The feed's `image_link` and `link` must be publicly reachable on your domain, so the real upload
-  test happens right after the deploy is up (images served from R2 or the VPS).
+### Decided after the session (supersedes the DigitalOcean choice: it is not in the Student Pack)
+- **Hosting: AWS + Cloudflare.** One EC2 VM in Mumbai (ap-south-1) running Docker Compose (API,
+  worker, Postgres) and Caddy for HTTPS, created by a CloudFormation template that you deploy.
+  Cloudflare R2 stores videos (private) and catalog photos. DNS stays at GoDaddy.
+- **URL: https://shop.shankhyaai.com.** GoDaddy A record `shop` -> the EC2 Elastic IP. The Vercel site
+  on `shankhyaai.com` / `www` is untouched. No CAA record exists, so Let's Encrypt can issue.
+- **Login: demo login only for the hackathon.** The deployed environment will be `demo` (production
+  security settings, demo login allowed, visible "Demo" banner). Email-code auth is still built and
+  tested (Day 5); it gets a sender after Nov 4.
+- **Feed test:** right after the deploy is up (Meta must fetch `link`/`image_link` from the domain);
+  I prepare the CSV and a Commerce Manager click-path, you upload and paste back the result.
 
-### Open questions
-1. Which domain/subdomain to use (e.g. `shop.<yourdomain>`), so `PUBLIC_BASE_URL` and the feed links
-   can be set.
+### Needed from you
+1. AWS: an account/IAM user that can deploy CloudFormation in ap-south-1.
+2. Cloudflare: an account with R2 enabled (R2 asks for a payment method even on the free tier).
+3. GoDaddy: add the `shop` A record once the stack outputs its Elastic IP.
 
 ---
 
