@@ -104,3 +104,30 @@ def ffprobe_json(path: Path, limits: Limits = DEFAULT_LIMITS) -> str:
         "-show_format", "-show_streams", str(path),
     ]  # fmt: skip
     return run_tool("ffprobe", args, limits).stdout
+
+
+def ffprobe_packet_end(path: Path, limits: Limits = DEFAULT_LIMITS) -> float:
+    """End time of the last video packet, for files whose header has no duration.
+
+    Browser recordings (Chrome's MediaRecorder WebM) are written as a stream and never get a
+    duration in the header, so the duration has to be read from the packets themselves.
+    """
+    args = [
+        "-v", "error", *PROTOCOLS, "-select_streams", "v:0",
+        "-show_entries", "packet=pts_time,duration_time", "-of", "csv=p=0", str(path),
+    ]  # fmt: skip
+    end = 0.0
+    for line in run_tool("ffprobe", args, limits).stdout.splitlines():
+        parts = line.strip().split(",")
+        try:
+            pts = float(parts[0])
+        except (ValueError, IndexError):
+            continue
+        dur = 0.0
+        if len(parts) > 1:
+            try:
+                dur = float(parts[1])
+            except ValueError:
+                dur = 0.0
+        end = max(end, pts + dur)
+    return end

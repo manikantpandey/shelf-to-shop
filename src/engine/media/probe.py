@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from engine.media.ffmpeg import DEFAULT_LIMITS, Limits, MediaToolError, ffprobe_json
+from engine.media.ffmpeg import (
+    DEFAULT_LIMITS,
+    Limits,
+    MediaToolError,
+    ffprobe_json,
+    ffprobe_packet_end,
+)
 
 
 class MediaRejectedError(ValueError):
@@ -95,6 +101,12 @@ def probe(
     if video is None:
         raise MediaRejectedError("no_video_stream", "file has no video track")
     duration = float(info.get("format", {}).get("duration") or video.get("duration") or 0)
+    if duration <= 0:
+        # Recorded in a browser: no duration in the header, so measure it from the packets.
+        try:
+            duration = ffprobe_packet_end(path, limits)
+        except MediaToolError as exc:
+            raise MediaRejectedError("unreadable", "video could not be read") from exc
     width, height = int(video.get("width", 0)), int(video.get("height", 0))
     if _rotation(video) in (90, 270):
         width, height = height, width

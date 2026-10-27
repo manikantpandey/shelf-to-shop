@@ -160,3 +160,25 @@ def test_cut_wav_round_trip(tmp_path: Path) -> None:
     cut, rate = read_wav(path)
     assert rate == 24000
     assert abs(len(cut) / rate - seg.duration_s) < 0.01
+
+
+@needs_ffmpeg
+def test_browser_recording_without_header_duration(tmp_path: Path) -> None:
+    """Chrome's MediaRecorder WebM has no duration in its header; it must still be accepted."""
+    import shutil
+    import subprocess
+
+    ffmpeg = shutil.which("ffmpeg")
+    assert ffmpeg is not None
+    # Written to a pipe, the muxer cannot go back and fill in the duration: like a browser.
+    data = subprocess.run(  # noqa: S603
+        [ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+         "testsrc2=size=640x360:rate=30", "-f", "lavfi", "-i", "sine=frequency=300",
+         "-t", "4", "-c:v", "libvpx", "-b:v", "500k", "-c:a", "libopus", "-f", "webm", "-"],
+        capture_output=True, check=True,
+    ).stdout  # fmt: skip
+    path = tmp_path / "recorded.webm"
+    path.write_bytes(data)
+    result = probe(path, MediaRules())
+    assert result.container == "ebml"  # WebM is an EBML (Matroska) file
+    assert 3.5 <= result.duration_s <= 4.5
