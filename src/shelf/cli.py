@@ -81,7 +81,7 @@ async def process(args: argparse.Namespace) -> int:
         slug=slug,
         whatsapp=args.whatsapp,
         public_base_url=base_url,
-        media_base_url=f"{base_url.rstrip('/')}/media",
+        media_base_url=f"{base_url.rstrip('/')}/media/{slug}",
     )
     published = publish(
         shop, result.products, result.decisions, result.enriched, result.images, out / "catalog"

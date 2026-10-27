@@ -13,7 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from engine.export.categories import FB_CATEGORIES
+from engine.export.categories import fb_category_id
 from engine.export.feed import FeedIssue, FeedItem, build_feed_csv, validate_item
 from engine.export.whatsapp import normalise_number, order_link, order_message
 from engine.pipeline.schemas import DetectedProduct, Enriched, FinalImage, PriceDecision
@@ -29,6 +29,28 @@ class ShopInfo(BaseModel):
     brand: str | None = None
 
 
+class ShopItem(BaseModel):
+    """One approved item, from any video. `id` is the retailer id: stable across republishes."""
+
+    id: str
+    title_en: str
+    title_hi: str
+    description_en: str = ""
+    description_hi: str = ""
+    price_inr: int
+    image: Path
+    ai_background: bool = False
+    sold_out: bool = False
+    category: str = "other"
+    colour: str = ""
+    brand: str | None = None
+    material: str | None = None
+    pattern: str | None = None
+    # Set when the photo is not the seller's own (e.g. Open Food Facts, CC BY-SA).
+    image_credit: str | None = None
+    image_credit_url: str | None = None
+
+
 class CatalogProduct(BaseModel):
     id: str
     title_en: str
@@ -39,6 +61,9 @@ class CatalogProduct(BaseModel):
     price_display: str
     image: str
     ai_background: bool
+    sold_out: bool
+    image_credit: str | None
+    image_credit_url: str | None
     colour: str
     material: str | None
     pattern: str | None
@@ -57,7 +82,8 @@ class PublishResult(BaseModel):
     feed_csv: Path | None
     images_zip: Path
     published: int
-    skipped: list[tuple[int, str]]
+    # (retailer id, reason) for items that could not go on the shop page at all.
+    skipped: list[tuple[str, str]]
     feed_warnings: list[FeedIssue]
     # Items left out of the feed only; they are still on the shop page.
     feed_errors: list[FeedIssue]
@@ -75,71 +101,105 @@ def publish(
     images: list[FinalImage],
     out_dir: Path,
 ) -> PublishResult:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    img_dir = out_dir / "images"
-    img_dir.mkdir(exist_ok=True)
+    """Publish one pipeline run (the CLI path): items are keyed by their index in the video."""
     price = {d.product_idx: d.price_inr for d in decisions}
     text = {e.product_idx: e for e in enriched}
     image = {i.product_idx: i for i in images}
+    items: list[ShopItem] = []
+    skipped: list[tuple[str, str]] = []
+    for p in products:
+        rid = retailer_id(shop.slug, p.idx)
+        value, e, img = price.get(p.idx), text.get(p.idx), image.get(p.idx)
+        if value is None:
+            skipped.append((rid, "no price"))
+        elif img is None:
+            skipped.append((rid, "no photo"))
+        elif e is None:
+            skipped.append((rid, "no title"))
+        else:
+            items.append(
+                ShopItem(
+                    id=rid,
+                    title_en=e.title_en,
+                    title_hi=e.title_hi,
+                    description_en=e.description_en,
+                    description_hi=e.description_hi,
+                    price_inr=value,
+                    image=img.path,
+                    ai_background=img.ai_background,
+                    category=e.category,
+                    colour=e.colour,
+                    brand=e.brand,
+                    material=e.material,
+                    pattern=e.pattern,
+                )
+            )
+    result = publish_items(shop, items, out_dir)
+    return result.model_copy(update={"skipped": skipped + result.skipped})
+
+
+def publish_items(shop: ShopInfo, items: list[ShopItem], out_dir: Path) -> PublishResult:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    img_dir = out_dir / "images"
+    img_dir.mkdir(exist_ok=True)
     number = normalise_number(shop.whatsapp)
     base = shop.public_base_url.rstrip("/")
     media = shop.media_base_url.rstrip("/")
 
     catalog: list[CatalogProduct] = []
     feed: list[FeedItem] = []
-    skipped: list[tuple[int, str]] = []
-    for p in products:
-        if price.get(p.idx) is None:
-            skipped.append((p.idx, "no price"))
+    skipped: list[tuple[str, str]] = []
+    for it in items:
+        if it.price_inr <= 0:
+            skipped.append((it.id, "no price"))
             continue
-        if p.idx not in image:
-            skipped.append((p.idx, "no photo"))
+        if not it.image.is_file():
+            skipped.append((it.id, "no photo"))
             continue
-        e = text.get(p.idx)
-        if e is None:
-            skipped.append((p.idx, "no title"))
-            continue
-        rid = retailer_id(shop.slug, p.idx)
-        paise = rupees_to_paise(int(price[p.idx] or 0))
-        url = f"{base}/s/{shop.slug}/p/{rid}"
-        file_name = f"{rid}.jpg"
-        shutil.copyfile(image[p.idx].path, img_dir / file_name)
+        paise = rupees_to_paise(it.price_inr)
+        url = f"{base}/s/{shop.slug}/p/{it.id}"
+        file_name = f"{it.id}.jpg"
+        shutil.copyfile(it.image, img_dir / file_name)
         catalog.append(
             CatalogProduct(
-                id=rid,
-                title_en=e.title_en,
-                title_hi=e.title_hi,
-                description_en=e.description_en,
-                description_hi=e.description_hi,
+                id=it.id,
+                title_en=it.title_en,
+                title_hi=it.title_hi,
+                description_en=it.description_en,
+                description_hi=it.description_hi,
                 price_paise=paise,
                 price_display=format_inr(paise),
                 image=file_name,
-                ai_background=image[p.idx].ai_background,
-                colour=e.colour,
-                material=e.material,
-                pattern=e.pattern,
+                ai_background=it.ai_background,
+                sold_out=it.sold_out,
+                image_credit=it.image_credit,
+                image_credit_url=it.image_credit_url,
+                colour=it.colour,
+                material=it.material,
+                pattern=it.pattern,
                 order_link_en=order_link(
-                    number, order_message(shop.name, e.title_en, paise, url, "en")
+                    number, order_message(shop.name, it.title_en, paise, url, "en")
                 ),
                 order_link_hi=order_link(
-                    number, order_message(shop.name, e.title_hi, paise, url, "hi")
+                    number, order_message(shop.name, it.title_hi, paise, url, "hi")
                 ),
             )
         )
         feed.append(
             FeedItem(
-                id=rid,
-                title=e.title_en,
-                description=e.description_en or e.title_en,
+                id=it.id,
+                title=it.title_en,
+                description=it.description_en or it.title_en,
+                availability="out of stock" if it.sold_out else "in stock",
                 price_paise=paise,
                 link=url,
-                image_link=f"{media}/{shop.slug}/{file_name}",
+                image_link=f"{media}/{file_name}",
                 # The maker's brand when printed on the pack (Haldiram's, Pepsi), else the shop.
-                brand=e.brand or shop.brand or shop.name,
-                fb_product_category=FB_CATEGORIES[e.category][0],
-                color=e.colour or None,
-                material=e.material,
-                pattern=e.pattern,
+                brand=it.brand or shop.brand or shop.name,
+                fb_product_category=fb_category_id(it.category),
+                color=it.colour or None,
+                material=it.material,
+                pattern=it.pattern,
             )
         )
 

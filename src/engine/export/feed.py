@@ -48,7 +48,8 @@ class FeedItem(BaseModel):
     link: str
     image_link: str
     brand: str
-    fb_product_category: int
+    # None when no verified category fits ("other"): sent blank, Meta lets the seller pick.
+    fb_product_category: int | None
     availability: Literal["in stock", "out of stock"] = "in stock"
     condition: Literal["new", "refurbished", "used"] = "new"
     color: str | None = None
@@ -106,7 +107,9 @@ def validate_item(item: FeedItem) -> list[FeedIssue]:
         err("image_link", "image_link must be an https URL to a JPEG or PNG")
     if not item.brand.strip() or len(item.brand) > 100:
         err("brand", "brand must be 1-100 characters")
-    if item.fb_product_category not in _VALID_CATEGORY_IDS:
+    if item.fb_product_category is None:
+        warn("fb_product_category", "no category; pick one in Commerce Manager")
+    elif item.fb_product_category not in _VALID_CATEGORY_IDS:
         err("fb_product_category", "fb_product_category is not one of our verified categories")
     for field, limit in (("color", 200), ("material", 200), ("pattern", 100)):
         value = getattr(item, field)
@@ -147,7 +150,7 @@ def build_feed_csv(items: list[FeedItem]) -> tuple[str, list[FeedIssue]]:
                 item.link,
                 item.image_link,
                 item.brand,
-                str(item.fb_product_category),
+                "" if item.fb_product_category is None else str(item.fb_product_category),
                 item.color or "",
                 item.material or "",
                 item.pattern or "",

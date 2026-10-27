@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -180,3 +181,47 @@ def test_feed_problems_do_not_block_the_shop_page(tmp_path: Any) -> None:
     assert result.published == 1  # the shop page has the item
     assert result.feed_csv is None  # but Meta would reject http links
     assert {i.field for i in result.feed_errors} == {"link", "image_link"}
+
+
+def test_shop_items_feed_links_sold_out_and_credit(tmp_path: Any) -> None:
+    from pathlib import Path
+
+    from PIL import Image
+
+    from engine.export.provenance import save_jpeg
+    from engine.pipeline.publish import ShopInfo, ShopItem, publish_items
+
+    img = Path(tmp_path) / "p.jpg"
+    img.write_bytes(save_jpeg(Image.new("RGB", (600, 600), "white"), ai_background=False))
+    shop = ShopInfo(
+        name="Gupta Store",
+        slug="gupta",
+        whatsapp="98765 43210",
+        public_base_url="https://shop.example",
+        media_base_url="https://shop.example/api/v1/public/media/gupta/v3",
+    )
+    items = [
+        ShopItem(id="gupta-a1", title_en="Pepsi 750 ml", title_hi="पेप्सी", price_inr=40,
+                 image=img, category="soda", brand="Pepsi"),
+        ShopItem(id="gupta-b2", title_en="Mirinda can", title_hi="मिरिंडा", price_inr=35,
+                 image=img, sold_out=True, category="other",
+                 image_credit="Open Food Facts", image_credit_url="https://world.openfoodfacts.org/product/1"),
+        ShopItem(id="gupta-c3", title_en="Bread", title_hi="ब्रेड", price_inr=0, image=img),
+    ]  # fmt: skip
+    result = publish_items(shop, items, Path(tmp_path) / "out")
+    assert result.published == 2
+    assert result.skipped == [("gupta-c3", "no price")]
+    assert result.feed_csv is not None
+    rows = {r["id"]: r for r in csv.DictReader(io.StringIO(result.feed_csv.read_text("utf-8")))}
+    # The photo URL is the media base plus the file: exactly what the public media route serves.
+    assert rows["gupta-a1"]["image_link"] == (
+        "https://shop.example/api/v1/public/media/gupta/v3/gupta-a1.jpg"
+    )
+    assert rows["gupta-a1"]["availability"] == "in stock"
+    assert rows["gupta-b2"]["availability"] == "out of stock"
+    assert rows["gupta-b2"]["fb_product_category"] == ""
+    assert any(w.field == "fb_product_category" for w in result.feed_warnings)
+    catalog = json.loads(result.catalog_json.read_text(encoding="utf-8"))
+    sold = next(p for p in catalog["products"] if p["id"] == "gupta-b2")
+    assert sold["sold_out"] is True
+    assert sold["image_credit"] == "Open Food Facts"

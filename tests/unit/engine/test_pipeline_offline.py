@@ -108,7 +108,7 @@ async def test_pipeline_end_to_end_offline(clip: Path, tmp_path: Path) -> None:
     out = publish(shop, result.products, result.decisions, result.enriched, result.images,
                   tmp_path / "catalog")  # fmt: skip
     assert out.published == 2
-    assert out.skipped == [(3, "no price")]
+    assert out.skipped == [("sharma-03", "no price")]
 
     rows = list(csv.DictReader(io.StringIO(out.feed_csv.read_text(encoding="utf-8"))))
     assert [(r["id"], r["price"]) for r in rows] == [("sharma-01", "1200.00 INR"),
