@@ -38,6 +38,7 @@ web/dist/
 web/dev-dist/
 playwright-report/
 test-results/
+web/e2e/.fixtures/
 
 # Local HTTPS certs for phone testing
 *.pem

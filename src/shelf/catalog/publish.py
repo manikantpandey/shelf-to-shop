@@ -8,7 +8,6 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from engine.export.feed import FeedInvalidError
 from engine.pipeline.publish import ShopInfo, publish
 from engine.pipeline.schemas import DetectedProduct, Enriched, FinalImage, PriceDecision
 from shelf.config import Settings
@@ -19,7 +18,7 @@ from shelf.storage import LocalStorage
 
 
 def media_base(settings: Settings, slug: str, version: int) -> str:
-    return f"{settings.public_base_url.rstrip('/')}/api/v1/public/media/{slug}/v{version}"
+    return f"{settings.api_url}/api/v1/public/media/{slug}/v{version}"
 
 
 def publish_job(
@@ -100,15 +99,7 @@ def publish_job(
         for r in rows
         if r.image_key
     ]
-    try:
-        result = publish(shop, products, decisions, enriched, images, storage.path(folder_key))
-    except FeedInvalidError as exc:
-        raise AppError(
-            "feed_invalid",
-            "Some items can't go into the Meta catalog: "
-            + "; ".join(i.message for i in exc.issues[:3]),
-            status=422,
-        ) from exc
+    result = publish(shop, products, decisions, enriched, images, storage.path(folder_key))
     if result.published == 0:
         raise AppError(
             "nothing_to_publish", "Add a price and photo to at least one item.", status=422
@@ -116,6 +107,15 @@ def publish_job(
     snapshot: dict[str, Any] = json.loads(result.catalog_json.read_text(encoding="utf-8"))
     for item in snapshot["products"]:
         item["image_url"] = f"{shop.media_base_url}/{item.pop('image')}"
+    feed_meta = {
+        "feed": result.feed_csv is not None,
+        "feed_left_out": sorted({i.item_id for i in result.feed_errors}),
+        "feed_reasons": sorted({i.message for i in result.feed_errors})[:5],
+    }
+    # Private note for the seller's catalog screen (never part of the public snapshot).
+    (storage.path(folder_key) / "feed_report.json").write_text(
+        json.dumps(feed_meta), encoding="utf-8"
+    )
     catalog = Catalog(
         workspace_id=workspace.id,
         job_id=job.id,
@@ -132,7 +132,7 @@ def publish_job(
             actor=f"user:{user.id}",
             action="catalog.published",
             target=f"v{version}",
-            meta={"items": result.published},
+            meta={"items": result.published, **feed_meta},
         )
     )
     db.flush()

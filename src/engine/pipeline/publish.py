@@ -14,7 +14,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from engine.export.categories import FB_CATEGORIES
-from engine.export.feed import FeedIssue, FeedItem, build_feed_csv
+from engine.export.feed import FeedIssue, FeedItem, build_feed_csv, validate_item
 from engine.export.whatsapp import normalise_number, order_link, order_message
 from engine.pipeline.schemas import DetectedProduct, Enriched, FinalImage, PriceDecision
 from engine.prices.inr import format_inr, rupees_to_paise
@@ -53,11 +53,14 @@ class Catalog(BaseModel):
 
 class PublishResult(BaseModel):
     catalog_json: Path
-    feed_csv: Path
+    # None when no item can go into the Meta feed (e.g. the site is not on https yet).
+    feed_csv: Path | None
     images_zip: Path
     published: int
     skipped: list[tuple[int, str]]
     feed_warnings: list[FeedIssue]
+    # Items left out of the feed only; they are still on the shop page.
+    feed_errors: list[FeedIssue]
 
 
 def retailer_id(slug: str, idx: int) -> str:
@@ -140,9 +143,21 @@ def publish(
             )
         )
 
-    csv_text, warnings = build_feed_csv(feed)
-    feed_path = out_dir / "meta_catalog_feed.csv"
-    feed_path.write_text(csv_text, encoding="utf-8")
+    # The shop page never depends on the Meta feed: items Meta would reject are left out of the
+    # feed (with the reason) but stay in the catalog.
+    feed_errors: list[FeedIssue] = []
+    feed_ok: list[FeedItem] = []
+    for entry in feed:
+        errors = [i for i in validate_item(entry) if i.severity == "error"]
+        feed_errors.extend(errors)
+        if not errors:
+            feed_ok.append(entry)
+    feed_path: Path | None = None
+    warnings: list[FeedIssue] = []
+    if feed_ok:
+        csv_text, warnings = build_feed_csv(feed_ok)
+        feed_path = out_dir / "meta_catalog_feed.csv"
+        feed_path.write_text(csv_text, encoding="utf-8")
     catalog_path = out_dir / "catalog.json"
     doc = Catalog(shop={"name": shop.name, "slug": shop.slug, "whatsapp": number},
                   products=catalog)  # fmt: skip
@@ -160,4 +175,5 @@ def publish(
         published=len(catalog),
         skipped=skipped,
         feed_warnings=warnings,
+        feed_errors=feed_errors,
     )

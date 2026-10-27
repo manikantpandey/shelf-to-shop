@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./storage/shelf.db"
     public_base_url: str = "http://localhost:5173"
+    # Where this API is reached, if not the same origin as the site (dev, native shell).
+    api_base_url: str | None = None
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
     # Shortcut sign-in for dev and the hackathon demo; refused when ENVIRONMENT=prod.
@@ -77,6 +79,10 @@ class Settings(BaseSettings):
         if self.demo_login_enabled and self.app_mode != "standalone":
             raise ValueError("demo login is only available in standalone mode")
         return self
+
+    @property
+    def api_url(self) -> str:
+        return (self.api_base_url or self.public_base_url).rstrip("/")
 
     @property
     def secure_cookies(self) -> bool:

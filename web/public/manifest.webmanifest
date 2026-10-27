@@ -1,0 +1,10 @@
+{
+  "name": "Shelf-to-Shop",
+  "short_name": "Shelf-to-Shop",
+  "description": "Turn a shelf video into a WhatsApp catalog.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDF0F2",
+  "theme_color": "#1C3FAA",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -5,6 +5,7 @@ Every query is scoped to the signed-in seller's workspace; another workspace's i
 
 from __future__ import annotations
 
+import json
 import re
 import secrets
 import uuid
@@ -90,9 +91,11 @@ def demo_login(
     ws = Workspace(owner_id=user.id, name=name, slug=slug)
     db.add(ws)
     db.flush()
-    start_session(db, settings, user, response)
+    row = start_session(db, settings, user, response)
     _audit(db, ws.id, f"user:{user.id}", "auth.demo_login")
-    return {"workspace": workspace_out(ws)}
+    # The CSRF token also travels in the body so a client on another origin (a future Android
+    # shell) can send it; CORS keeps other sites from reading this response.
+    return {"workspace": workspace_out(ws), "csrf_token": row.csrf_token}
 
 
 @router.post("/auth/logout", tags=["auth"])
@@ -108,6 +111,7 @@ def me(seller: SellerDep, settings: SettingsDep) -> dict[str, Any]:
         "name": seller.user.display_name,
         "workspace": workspace_out(seller.workspace),
         "environment": settings.environment,
+        "csrf_token": seller.session.csrf_token,
     }
 
 
@@ -439,10 +443,14 @@ def _latest(db: Session, workspace_id: uuid.UUID) -> Catalog | None:
 
 
 @router.get("/catalog", tags=["catalog"])
-def my_catalog(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict[str, Any]:
+def my_catalog(
+    request: Request, seller: SellerDep, db: SessionDep, settings: SettingsDep
+) -> dict[str, Any]:
     latest = _latest(db, seller.workspace.id)
     if latest is None:
         return {"published": False}
+    report_path = _storage(request).path(latest.folder_key) / "feed_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else {}
     count = db.scalar(
         select(func.count()).select_from(Catalog).where(Catalog.workspace_id == seller.workspace.id)
     )
@@ -453,7 +461,9 @@ def my_catalog(seller: SellerDep, db: SessionDep, settings: SettingsDep) -> dict
         "published_at": latest.created_at.isoformat(),
         "items": len(latest.snapshot.get("products", [])),
         "url": f"{settings.public_base_url}/s/{seller.workspace.slug}",
-        "feed_url": "/api/v1/catalog/feed.csv",
+        "feed_url": "/api/v1/catalog/feed.csv" if report.get("feed", True) else None,
+        "feed_left_out": len(report.get("feed_left_out", [])),
+        "feed_reasons": report.get("feed_reasons", []),
         "photos_url": "/api/v1/catalog/photos.zip",
     }
 
@@ -468,6 +478,8 @@ def download(
     folder = _storage(request).path(latest.folder_key)
     if name == "feed.csv":
         path, media = folder / "meta_catalog_feed.csv", "text/csv"
+        if not path.exists():
+            raise AppError("no_feed", "No item could go into the Meta catalog file.", status=404)
     else:
         path, media = folder / f"{seller.workspace.slug}_photos.zip", "application/zip"
     download_name = (

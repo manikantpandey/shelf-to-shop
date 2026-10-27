@@ -127,3 +127,56 @@ def test_order_link_prefills_message() -> None:
     assert text == message
     assert "₹1,200" in text
     assert " " not in link and "&" not in parts.query.replace("text=", "")
+
+
+def test_feed_problems_do_not_block_the_shop_page(tmp_path: Any) -> None:
+    from pathlib import Path
+
+    from PIL import Image
+
+    from engine.export.provenance import save_jpeg
+    from engine.pipeline.publish import ShopInfo, publish
+    from engine.pipeline.schemas import DetectedProduct, Enriched, FinalImage, PriceDecision
+
+    img = Path(tmp_path) / "p.jpg"
+    img.write_bytes(save_jpeg(Image.new("RGB", (600, 600), "white"), ai_background=False))
+    shop = ShopInfo(
+        name="Shop",
+        slug="shop",
+        whatsapp="98765 43210",
+        public_base_url="http://localhost:5173",
+        media_base_url="http://localhost:8000/m",
+    )
+    result = publish(
+        shop,
+        [
+            DetectedProduct(
+                idx=1,
+                description="x",
+                colour="red",
+                noun="item",
+                first_seen_s=0,
+                last_seen_s=1,
+                best_frame_s=0,
+            )
+        ],
+        [PriceDecision(product_idx=1, price_inr=100, source="seller", confidence=1)],
+        [
+            Enriched(
+                product_idx=1,
+                title_en="Red cup",
+                title_hi="लाल कप",
+                description_en="A cup.",
+                description_hi="कप।",
+                category="home_decor",
+                colour="red",
+                material=None,
+                pattern=None,
+            )
+        ],
+        [FinalImage(product_idx=1, path=img, ai_background=False)],
+        Path(tmp_path) / "out",
+    )
+    assert result.published == 1  # the shop page has the item
+    assert result.feed_csv is None  # but Meta would reject http links
+    assert {i.field for i in result.feed_errors} == {"link", "image_link"}

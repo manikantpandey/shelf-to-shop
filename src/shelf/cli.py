@@ -16,7 +16,6 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
-from engine.export.feed import FeedInvalidError
 from engine.pipeline.publish import ShopInfo, publish
 from engine.pipeline.run import Pipeline, StageEvent
 from engine.providers.fake import Scenario, fake_providers
@@ -84,16 +83,15 @@ async def process(args: argparse.Namespace) -> int:
         public_base_url=base_url,
         media_base_url=f"{base_url.rstrip('/')}/media",
     )
-    try:
-        published = publish(shop, result.products, result.decisions, result.enriched,
-                            result.images, out / "catalog")  # fmt: skip
-    except FeedInvalidError as exc:
-        print("\nThe Meta feed would be rejected:", file=sys.stderr)
-        for issue in exc.issues:
+    published = publish(
+        shop, result.products, result.decisions, result.enriched, result.images, out / "catalog"
+    )
+    if published.feed_errors:
+        print("\nLeft out of the Meta feed (still on the shop page):", file=sys.stderr)
+        for issue in published.feed_errors:
             print(f"  item {issue.item_id}: {issue.field}: {issue.message}", file=sys.stderr)
         if not base_url.startswith("https://"):
             print(f"  (links need https; pass --base-url, now {base_url!r})", file=sys.stderr)
-        return 4
 
     titles = {e.product_idx: e.title_en for e in result.enriched}
     print("\nItems")
@@ -108,7 +106,8 @@ async def process(args: argparse.Namespace) -> int:
             print(f"  {f.kind:<18} {target}  {f.params or ''} {f.options or ''}")
     cost = sum((e.cost_usd for e in log.entries), Decimal(0))
     print(f"\nPublished {published.published} item(s); skipped {published.skipped or 'none'}")
-    print(f"Feed:    {published.feed_csv}\nCatalog: {published.catalog_json}\n"
+    feed = published.feed_csv or "not written (see above)"
+    print(f"Feed:    {feed}\nCatalog: {published.catalog_json}\n"
           f"Photos:  {published.images_zip}\nModel cost: ${cost:.4f} "
           f"({len(log.entries)} calls; run log {out / 'runlog.jsonl'})")  # fmt: skip
     return 0
