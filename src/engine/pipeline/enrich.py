@@ -28,6 +28,7 @@ class EnrichItem(BaseModel):
     title_hi: str = Field(description="the same title in natural Hindi (Devanagari)")
     description_en: str = Field(description="1-2 plain sentences about what is visible")
     description_hi: str = Field(description="the same description in natural Hindi")
+    brand: str | None = Field(description="brand printed on the pack or label, else null")
     category: CategoryKey  # type: ignore[valid-type]
     colour: str
     material: str | None = Field(description="only if visible or stated, else null")
@@ -43,7 +44,8 @@ TASK = (
     "would search for (for example 'Blue cotton saree with gold border'), the same title in "
     "natural Hindi, and one or two plain sentences describing only what is visible. Never "
     "mention prices, discounts, phone numbers, links or claims you cannot see (no 'best "
-    "quality', no 'pure silk' unless it is clear). Choose the closest category from the list. "
+    "quality', no 'pure silk' unless it is clear). Give the brand only if it is printed on the "
+    "item. Choose the closest category from the list. "
     "Use the item photos in the order given."
 )
 
@@ -108,6 +110,7 @@ async def enrich(
                 title_hi=clean_text(item.title_hi, 65) or clean_text(item.title_en, 65),
                 description_en=clean_text(item.description_en, 500),
                 description_hi=clean_text(item.description_hi, 500),
+                brand=clean_text(item.brand, 100) if item.brand else None,
                 category=item.category,
                 colour=clean_text(item.colour, 60),
                 material=clean_text(item.material, 60) if item.material else None,

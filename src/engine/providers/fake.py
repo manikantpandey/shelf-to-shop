@@ -176,6 +176,7 @@ class FakeText:
                 "colour": item.get("colour") or "plain",
                 "material": "cotton" if "cotton" in desc.lower() else None,
                 "pattern": None,
+                "brand": None,
             })  # fmt: skip
         value = output.model_validate({"items": rows})
         return StructuredResult(value, Decimal(0), 0, repaired=False)

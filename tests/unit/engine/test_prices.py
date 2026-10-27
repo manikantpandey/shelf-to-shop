@@ -42,6 +42,9 @@ def values(text: str) -> list[int]:
         ("एक हज़ार दो सौ", [1200]),  # nukta variant
         ("साढ़े तीन हज़ार", [3500]),
         ("सादे आठ सौ", [850]),  # common ASR spelling of साढ़े
+        ("तीन मसाला बारह बारह रुपए में", [3, 12]),  # repeated number = each (clip B)
+        ("das das rupaye", [10]),
+        ("दो मसाले आठ रुपए में", [2, 8]),  # "2 for 8": likely_prices drops the 2
         ("ये सादे वाले", []),  # plain "सादे" (plain ones) is not a number
         ("पाँच सौ", [500]),
         ("पांच सौ", [500]),  # anusvara variant
@@ -80,6 +83,11 @@ def test_spans_point_at_the_original_text() -> None:
     mentions = find_prices(text)
     assert [text[m.start : m.end] for m in mentions] == ["1200", "saadhe aath sau"]
     assert mentions[1].currency_cue
+
+
+def test_bundle_phrases_keep_only_the_price() -> None:
+    assert [m.value for m in likely_prices(find_prices("तीन मसाला बारह बारह रुपए में"))] == [12]
+    assert [m.value for m in likely_prices(find_prices("दो मसाले आठ रुपए में"))] == [8]
 
 
 def test_quantities_are_filtered_unless_marked_as_money() -> None:

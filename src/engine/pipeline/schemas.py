@@ -113,6 +113,7 @@ class Enriched(BaseModel):
     title_hi: str
     description_en: str
     description_hi: str
+    brand: str | None = None
     category: str
     colour: str
     material: str | None

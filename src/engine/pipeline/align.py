@@ -84,7 +84,6 @@ def place_turns(
 ) -> tuple[list[TimedChunk], list[TimedMention], Literal["aligned", "interpolated", "none"]]:
     """Chunks and price mentions with times. Returns (chunks, mentions, timing method)."""
     chunks: list[TimedChunk] = []
-    mentions: list[TimedMention] = []
     methods: set[str] = set()
     for turn_no, (start, end, text) in enumerate(turns):
         inside = spans_within(speech_spans, start, end) or [(start, end)]
@@ -104,21 +103,31 @@ def place_turns(
                 seen += len(p)
                 placed.append((p, (a, _speech_time(inside, seen / total))))
         for raw, (s, e) in placed:
-            piece = raw.strip()
-            chunk_idx = len(chunks)
-            chunks.append(TimedChunk(start_s=round(s, 3), end_s=round(e, 3), text=piece,
+            chunks.append(TimedChunk(start_s=round(s, 3), end_s=round(e, 3), text=raw.strip(),
                                      turn=turn_no))  # fmt: skip
-            for m in likely_prices(find_prices(piece)):
-                frac = m.start / max(1, len(piece))
-                mentions.append(
-                    TimedMention(
-                        value_inr=m.value,
-                        t_s=round(s + (e - s) * frac, 3),
-                        words=m.text,
-                        chunk=chunk_idx,
-                        confidence=m.confidence,
-                    )
-                )
+    mentions = mentions_in_chunks(chunks)
     if methods == {"aligned"}:
         return chunks, mentions, "aligned"
     return chunks, mentions, "interpolated" if methods else "none"
+
+
+def mentions_in_chunks(chunks: list[TimedChunk]) -> list[TimedMention]:
+    """Price mentions with times, read from already-placed chunks.
+
+    Kept separate from transcription so parser improvements apply to cached transcripts.
+    """
+    mentions: list[TimedMention] = []
+    for chunk_idx, chunk in enumerate(chunks):
+        s, e, piece = chunk.start_s, chunk.end_s, chunk.text
+        for m in likely_prices(find_prices(piece)):
+            frac = m.start / max(1, len(piece))
+            mentions.append(
+                TimedMention(
+                    value_inr=m.value,
+                    t_s=round(s + (e - s) * frac, 3),
+                    words=m.text,
+                    chunk=chunk_idx,
+                    confidence=m.confidence,
+                )
+            )
+    return mentions

@@ -23,6 +23,8 @@ from engine.prices.numbers import (
 )
 
 MAX_PRICE_INR = 10_000_000
+# Bump when parsing changes, so cached pipeline runs re-read their transcripts.
+PARSER_VERSION = 3
 _TOKEN = re.compile(
     r"(?P<num>[0-9०-९](?:[0-9०-९]|,(?=[0-9०-९]))*(?:\.[0-9०-९]+)?(?:\s?[kK](?![A-Za-z]))?)"
     r"|(?P<word>[A-Za-zऀ-ॿ]+(?:-[A-Za-z]+)*\.?)"
@@ -153,6 +155,15 @@ def _parse_at(toks: list[_Tok], i: int) -> tuple[float, int, bool] | None:
                 break
             if matched and cnt >= last_mult:
                 break
+            # "barah barah rupaye" = 12 rupees each (Hindi repeats a number to mean "each").
+            if (
+                not matched
+                and nxt is not None
+                and nxt.kind == "num"
+                and toks[j].kind == "num"
+                and nxt.value == cnt
+            ):
+                return cnt, k + 1, False
             # "barah pachaas" = 12 x 100 + 50: a 1-99 number followed by a 10-99 number.
             colloquial = (
                 not matched

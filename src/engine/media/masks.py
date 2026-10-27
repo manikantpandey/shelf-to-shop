@@ -39,3 +39,47 @@ def save_mask(mask: np.ndarray, path: Path) -> None:
 
 def load_mask(path: Path) -> np.ndarray:
     return np.asarray(Image.open(path).convert("L")) > 127
+
+
+def keep_main_regions(
+    mask: np.ndarray, min_fraction: float = 0.15, work_width: int = 256
+) -> np.ndarray:
+    """Drop small loose fragments; keep every region at least `min_fraction` of the largest.
+
+    Components are found on a downscaled copy (fast, pure Python), then applied to the full mask,
+    so kept regions keep their full-resolution edges.
+    """
+    h, w = mask.shape
+    if not mask.any():
+        return mask
+    scale = min(1.0, work_width / w)
+    sw, sh = max(1, round(w * scale)), max(1, round(h * scale))
+    small_img = Image.fromarray(mask.astype(np.uint8) * 255).resize((sw, sh), Image.Resampling.BOX)
+    small = np.asarray(small_img) > 64
+    labels = np.zeros(small.shape, dtype=np.int32)
+    sizes = [0]
+    for y0, x0 in zip(*np.nonzero(small), strict=True):
+        if labels[y0, x0]:
+            continue
+        label = len(sizes)
+        labels[y0, x0] = label
+        stack, size = [(int(y0), int(x0))], 0
+        while stack:
+            y, x = stack.pop()
+            size += 1
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= ny < sh and 0 <= nx < sw and small[ny, nx] and not labels[ny, nx]:
+                    labels[ny, nx] = label
+                    stack.append((ny, nx))
+        sizes.append(size)
+    biggest = max(sizes)
+    keep_ids = [i for i, s in enumerate(sizes) if i and s >= min_fraction * biggest]
+    keep = np.isin(labels, keep_ids)
+    # Grow one small pixel so edges of kept regions survive the nearest-neighbour upscale.
+    grown = keep.copy()
+    grown[1:] |= keep[:-1]
+    grown[:-1] |= keep[1:]
+    grown[:, 1:] |= keep[:, :-1]
+    grown[:, :-1] |= keep[:, 1:]
+    full = Image.fromarray(grown.astype(np.uint8) * 255).resize((w, h), Image.Resampling.NEAREST)
+    return mask & (np.asarray(full) > 127)

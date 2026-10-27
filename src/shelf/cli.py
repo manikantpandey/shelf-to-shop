@@ -16,6 +16,7 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
+from engine.export.feed import FeedInvalidError
 from engine.pipeline.publish import ShopInfo, publish
 from engine.pipeline.run import Pipeline, StageEvent
 from engine.providers.fake import Scenario, fake_providers
@@ -83,8 +84,16 @@ async def process(args: argparse.Namespace) -> int:
         public_base_url=base_url,
         media_base_url=f"{base_url.rstrip('/')}/media",
     )
-    published = publish(shop, result.products, result.decisions, result.enriched,
-                        result.images, out / "catalog")  # fmt: skip
+    try:
+        published = publish(shop, result.products, result.decisions, result.enriched,
+                            result.images, out / "catalog")  # fmt: skip
+    except FeedInvalidError as exc:
+        print("\nThe Meta feed would be rejected:", file=sys.stderr)
+        for issue in exc.issues:
+            print(f"  item {issue.item_id}: {issue.field}: {issue.message}", file=sys.stderr)
+        if not base_url.startswith("https://"):
+            print(f"  (links need https; pass --base-url, now {base_url!r})", file=sys.stderr)
+        return 4
 
     titles = {e.product_idx: e.title_en for e in result.enriched}
     print("\nItems")

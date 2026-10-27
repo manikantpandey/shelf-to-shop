@@ -98,3 +98,18 @@ def test_jpeg_carries_digital_source_type(ai: bool, source: str) -> None:
     assert source.encode() in xmp
     assert b"Iptc4xmpExt:DigitalSourceType" in xmp
     assert "exif" not in img.info
+
+
+def test_loose_fragments_are_dropped_but_big_regions_kept() -> None:
+    from engine.media.masks import keep_main_regions
+
+    mask = np.zeros((400, 600), dtype=bool)
+    mask[100:300, 50:250] = True  # can 1
+    mask[100:300, 300:480] = True  # can 2, separate but large
+    mask[20:24, 560:564] = True  # speckle
+    mask[380:383, 10:13] = True  # speckle
+    cleaned = keep_main_regions(mask)
+    assert cleaned[200, 100] and cleaned[200, 400]
+    assert not cleaned[21, 561] and not cleaned[381, 11]
+    assert cleaned.sum() == mask[100:300, 50:250].sum() + mask[100:300, 300:480].sum()
+    assert not keep_main_regions(np.zeros((10, 10), dtype=bool)).any()

@@ -35,6 +35,15 @@ CategoryKey = Literal[
     "tea_coffee",
     "dairy",
     "food",
+    "candy_chocolate",
+    "bakery_bread",
+    "condiments_sauces",
+    "soda",
+    "juice",
+    "water",
+    "energy_drinks",
+    "beverages",
+    "disposable_diapers",
     "other",
 ]
 
@@ -73,6 +82,18 @@ FB_CATEGORIES: dict[str, tuple[int, str]] = {
     "tea_coffee": (24, "food & beverages > beverages > coffee & tea"),
     "dairy": (13, "food & beverages > food > dairy, eggs & cheese"),
     "food": (18, "food & beverages > food"),
+    "candy_chocolate": (8, "food & beverages > food > candy & chocolate"),
+    "bakery_bread": (11, "food & beverages > food > bakery & bread"),
+    "condiments_sauces": (12, "food & beverages > food > condiments & sauces"),
+    "soda": (22, "food & beverages > beverages > soda"),
+    "juice": (20, "food & beverages > beverages > juice"),
+    "water": (23, "food & beverages > beverages > water"),
+    "energy_drinks": (19, "food & beverages > beverages > sports & energy drinks"),
+    "beverages": (27, "food & beverages > beverages"),
+    "disposable_diapers": (
+        641,
+        "baby products > diapering & potty training > diapering > diapers > disposable diapers",
+    ),
 }
 
 # Apparel categories where Meta asks for colour/material/pattern (and gender/age group).

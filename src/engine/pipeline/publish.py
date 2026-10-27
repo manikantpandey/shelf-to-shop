@@ -131,7 +131,8 @@ def publish(
                 price_paise=paise,
                 link=url,
                 image_link=f"{media}/{shop.slug}/{file_name}",
-                brand=shop.brand or shop.name,
+                # The maker's brand when printed on the pack (Haldiram's, Pepsi), else the shop.
+                brand=e.brand or shop.brand or shop.name,
                 fb_product_category=FB_CATEGORIES[e.category][0],
                 color=e.colour or None,
                 material=e.material,

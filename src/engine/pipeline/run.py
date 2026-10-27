@@ -22,8 +22,9 @@ from pydantic import BaseModel, Field
 from engine.export.provenance import save_jpeg
 from engine.media.composite import add_corner_mark, compose
 from engine.media.ingest import IngestResult, ingest
-from engine.media.masks import load_mask, save_mask
+from engine.media.masks import keep_main_regions, load_mask, save_mask
 from engine.media.transcode import frame_at
+from engine.pipeline.align import mentions_in_chunks
 from engine.pipeline.enrich import enrich
 from engine.pipeline.match import match_prices
 from engine.pipeline.schemas import (
@@ -36,6 +37,7 @@ from engine.pipeline.schemas import (
     Transcript,
 )
 from engine.pipeline.verify import verify
+from engine.prices.hinglish import PARSER_VERSION
 from engine.providers.errors import ProviderError
 from engine.providers.interfaces import Providers
 from engine.runlog import CallContext
@@ -189,9 +191,13 @@ class Pipeline:
             self._stage("transcribe", 1, {"ingest": self.hashes["ingest"]}, Transcript, transcribe),
         )
         products = detected.products
+        # Re-read prices from the (possibly cached) transcript with the current parser.
+        transcript = transcript.model_copy(
+            update={"mentions": mentions_in_chunks(transcript.chunks)}
+        )
 
         segmented = await self._stage(
-            "segment", 1, {"detect": self.hashes["detect"]}, SegmentOut,
+            "segment", 2, {"detect": self.hashes["detect"]}, SegmentOut,
             lambda: self._segment(products, media),
         )  # fmt: skip
         enriched = await self._stage(
@@ -203,7 +209,7 @@ class Pipeline:
         matched = await self._stage(
             "match", 2,
             {"detect": self.hashes["detect"], "transcribe": self.hashes["transcribe"],
-             "enrich": self.hashes["enrich"]},
+             "enrich": self.hashes["enrich"], "parser": PARSER_VERSION},
             MatchOut, lambda: self._match(products, transcript, photo_colours),
         )  # fmt: skip
         verified = await self._stage(
@@ -238,14 +244,16 @@ class Pipeline:
                 result = await self.p.segmenter.cutout(ctx, frame, p.box, p.noun)
             if result is None or not result.mask.any():
                 return None
+            # Real clips (spike on clip A-C): SAM leaves small loose fragments; drop them.
+            mask = await asyncio.to_thread(keep_main_regions, result.mask)
             mask_path = out_dir / f"mask_{p.idx:02d}.png"
-            save_mask(result.mask, mask_path)
+            save_mask(mask, mask_path)
             return Cutout(
                 product_idx=p.idx,
                 frame=frame,
                 mask=mask_path,
                 confidence=result.confidence,
-                coverage=round(float(result.mask.mean()), 4),
+                coverage=round(float(mask.mean()), 4),
                 method=result.method,  # type: ignore[arg-type]
             )
 
