@@ -1,8 +1,37 @@
 # Design plan
 
-Revision 2, Oct 27, 2026, written before the redesign code. Scope: the `web/` PWA (seller app and public shop
-page). Tokens live in `web/src/styles/app.css`; if code and this document disagree, fix one of them in the same
-change.
+Revision 3, Oct 28, 2026 (revision 2 was Oct 27). Scope: the `web/` PWA (seller app and public shop page).
+Tokens live in `web/src/styles/app.css`; if code and this document disagree, fix one of them in the same change.
+
+## Revision 3: running the shop, not just making the catalog
+
+Trying revision 2 as a shopkeeper, the owner asked for "management options" and a better font. Looked at from the
+counter, three gaps stood out: prices and stock change every week but could only be edited one item at a time;
+customers could only order one item per message, while a kirana order is a list; and nothing told the customer
+when the shop is open, whether it delivers, or how to pay. Chosen with the owner (all options taken):
+
+- **Stock and prices**: a sold-out switch on every item tile, select many items to mark sold out, hide, move or
+  change the price by rupees or percent; add an item by hand (name, price, MRP, section, then a photo).
+- **Sections**: items grouped by category into sections (Snacks, Cold drinks, ...) that the seller renames in
+  English and Hindi, reorders and adds to; "show at the top" pins an item; "hide from shop" keeps it off the page.
+- **Offers and MRP**: MRP shown struck through next to the shop's price (and sent to Meta as `sale_price`); an
+  offer strip across the top of the shop page.
+- **Shop profile**: hours, address, pickup or delivery, delivery note, minimum order, UPI ID, shop photo, about.
+- **Basket orders**: customers add items with quantities and send one numbered WhatsApp message with the total;
+  the server prices the basket from the published shop. Every order also lands in an **order book** (new, packed,
+  delivered, paid) with today's sales.
+- **Share kit**: QR code, a printable counter poster, and a WhatsApp Status picture of any item.
+- **Navigation**: phones get Home, Items, Record, Orders and More (Videos, Shop profile, Sections, Share kit,
+  Settings); laptops list everything in the sidebar, with a count of new orders.
+- **Font: Poppins** (chosen with options over Mukta, Baloo 2 and keeping Anek + Noto): friendly geometric letters
+  from an Indian foundry, one family for English and Hindi, familiar from Indian apps. It replaces both Anek
+  (signboard, headings) and Noto (text); the signboard keeps its board, border and capitals, now in Poppins 700.
+- Home now puts what needs the shopkeeper first (new orders, then questions), then "Your shop" (link, share,
+  downloads), then the week's numbers.
+
+Checked against the avoid list again: the order book uses ruled lines and a dashed total rule from a receipt,
+not cards with shadows; numbered markers still appear only for the pipeline steps; no new colours were added
+(the offer strip is marigold, which already means "price and offer").
 
 ## 0. Why revision 2
 
@@ -77,14 +106,13 @@ Status never relies on colour alone: every state has a word ("On shop", "Sold ou
 
 ## 4. Type
 
-- **Display: Anek Devanagari** (Ek Type, OFL, self-hosted variable font with width 75–125 and weight 100–800).
-  It covers Latin and Devanagari in one designed family, so English and Hindi signboards match. Signboard
-  lettering: width 78, weight 750, tight leading. Screen titles: width 88, weight 650.
-- **Text: Noto Sans + Noto Sans Devanagari** (unchanged) for body, inputs and **all prices**, with tabular
-  lining figures (`font-variant-numeric: tabular-nums`), so price columns line up.
-- Scale (px): 13 · 15 · 17 (body) · 20 · 24 · 30 · 40. Signboard 30 (phone) / 34 (desktop); tag price 20 on
-  tiles, 40 in the item sheet. `:lang(hi)` text gets 1.06× size and 1.6 line height so matras never clip.
-- No all-caps labels. Section headings are sentence case at 20/650 in Anek.
+- **Poppins** (Indian Type Foundry, OFL, self-hosted at 400, 500, 600 and 700; Latin and Devanagari) for
+  everything since revision 3. Signboard: 700, capitals, slight tracking. Headings: 600. Body: 400 at 16 px.
+  Labels and buttons: 600 to 700. Prices: 700 on the marigold tag.
+- Scale (px): 13 · 15 · 16 (body) · 17 · 20 · 24 · 30 · 40. Signboard 24 (phone) / 30 (shop page on laptops);
+  tag price 20 on tiles, 40 in the item sheet. `:lang(hi)` text gets 1.65 line height so matras never clip.
+- No all-caps labels (the signboard's capitals are the shop's name, as painted).
+- Revision 2 used Anek Devanagari (display) with Noto Sans (text); replaced at the owner's request.
 
 ## 5. Space, radius, depth
 

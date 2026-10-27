@@ -1,6 +1,7 @@
-import "@fontsource-variable/anek-devanagari/wdth.css";
-import "@fontsource-variable/noto-sans";
-import "@fontsource-variable/noto-sans-devanagari";
+import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/500.css";
+import "@fontsource/poppins/600.css";
+import "@fontsource/poppins/700.css";
 import "./styles/app.css";
 import "./i18n";
 

@@ -20,6 +20,21 @@ const PATHS: Record<string, string> = {
   download: "M12 3v12M7 10l5 5 5-5M4 20h16",
   chat: "M4 4h16v12H9l-5 4z",
   barcode: "M4 5v14M7 5v14M10 5v14M14 5v14M16 5v14M20 5v14",
+  orders: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  store: "M3 9l1.5-5h15L21 9M3 9h18M3 9v11h18V9M9 20v-6h6v6",
+  qr: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2M14 18h2v2M18 18h2v2",
+  star: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z",
+  hide: "M3 3l18 18M10.6 6.1A9 9 0 0 1 21 12a14 14 0 0 1-2.3 3.1M6.6 6.6A14 14 0 0 0 3 12s3 6 9 6a9 9 0 0 0 4.3-1.1",
+  plus: "M12 5v14M5 12h14",
+  minus: "M5 12h14",
+  trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+  up: "M6 15l6-6 6 6",
+  down: "M6 9l6 6 6-6",
+  sections: "M4 6h16M4 12h10M4 18h13",
+  basket: "M3 9h18l-2 11H5zM8 9l4-6 4 6",
+  print: "M7 9V3h10v6M7 18H4v-8h16v8h-3M7 14h10v7H7z",
+  check2: "M4 12.5 9.5 18 20 6",
 };
 
 export type IconName = keyof typeof PATHS;

@@ -11,10 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource-variable/anek-devanagari": "5.3.0",
-    "@fontsource-variable/noto-sans": "5.3.0",
-    "@fontsource-variable/noto-sans-devanagari": "5.3.0",
+    "@fontsource/poppins": "5.3.0",
     "i18next": "26.5.11",
+    "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-i18next": "17.1.9",
@@ -24,6 +23,7 @@
     "@playwright/test": "1.64.1",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",

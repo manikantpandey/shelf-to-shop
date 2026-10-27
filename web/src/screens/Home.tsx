@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { api, apiUrl, type MyCatalog, type Stats, type VideoSummary } from "../api";
 import { Icon } from "../components/Icon";
 import { Signboard } from "../components/Signboard";
+import { formatINR } from "../format";
 import { useSession } from "../session";
 import { Shell } from "../Shell";
 import { VideoRow } from "./Videos";
@@ -60,53 +61,13 @@ export function Home() {
   const weekday = new Intl.DateTimeFormat(i18n.language === "hi" ? "hi-IN" : "en-IN", { weekday: "short" });
 
   return (
-    <Shell
-      title={t("home.title")}
-      board={board}
-      actions={
-        url ? (
-          <>
-            <a className="btn primary" href={share} target="_blank" rel="noopener">
-              <Icon name="chat" />
-              {t("home.share")}
-            </a>
-            <button type="button" className="btn" onClick={copy}>
-              <Icon name={copied ? "check" : "copy"} />
-              {copied ? t("home.copied") : t("home.copy")}
-            </button>
-            <a className="btn quiet" href={url} target="_blank" rel="noopener">
-              <Icon name="open" />
-              {t("home.open_shop")}
-            </a>
-          </>
-        ) : undefined
-      }
-    >
-      <div className="shop-line">
-        {url ? (
-          <p>
-            {t("home.live", { count: stats.items_live })}{" "}
-            <a className="url" href={url} target="_blank" rel="noopener">{url.replace(/^https?:\/\//, "")}</a>
-          </p>
-        ) : (
-          <p className="muted">{t("home.not_live")}</p>
-        )}
-        {catalog.published ? (
-          <div className="row">
-            {catalog.feed_url ? (
-              <a className="btn small quiet" href={apiUrl(catalog.feed_url)}><Icon name="download" size={18} />{t("home.feed")}</a>
-            ) : null}
-            <a className="btn small quiet" href={apiUrl(catalog.photos_url)}><Icon name="download" size={18} />{t("home.photos")}</a>
-          </div>
-        ) : null}
-      </div>
-      {catalog.published && !catalog.feed_url ? <p className="muted small">{t("home.feed_unavailable")}</p> : null}
-
-      {working ? (
-        <Link className="notice calm" to={`/jobs/${working.id}`}>
-          <Icon name="videos" />
-          <span className="grow">{t("home.processing")}</span>
-          <Icon name="next" />
+    <Shell title={t("home.title")} board={board}>
+      {/* What needs the shopkeeper comes first: new orders, then questions, then work in progress. */}
+      {stats.orders.counts.new ? (
+        <Link className="notice" to="/orders">
+          <Icon name="orders" />
+          <span className="grow">{t("home.new_orders", { count: stats.orders.counts.new })}</span>
+          <span className="btn small primary">{t("home.see_orders")}</span>
         </Link>
       ) : null}
       {toCheck ? (
@@ -120,6 +81,51 @@ export function Home() {
           <span className="btn small primary">{toCheck.open_flags ? t("home.check") : t("home.review")}</span>
         </Link>
       ) : null}
+      {working ? (
+        <Link className="notice calm" to={`/jobs/${working.id}`}>
+          <Icon name="videos" />
+          <span className="grow">{t("home.processing")}</span>
+          <Icon name="next" />
+        </Link>
+      ) : null}
+
+      <section className="panel" aria-labelledby="shop-h">
+        <h2 id="shop-h">{t("home.your_shop")}</h2>
+        {url ? (
+          <>
+            <p>
+              {t("home.live", { count: stats.items_live })}{" "}
+              <a className="url" href={url} target="_blank" rel="noopener">{url.replace(/^https?:\/\//, "")}</a>
+            </p>
+            <div className="row">
+              <a className="btn primary" href={share} target="_blank" rel="noopener">
+                <Icon name="chat" />
+                {t("home.share")}
+              </a>
+              <button type="button" className="btn" onClick={copy}>
+                <Icon name={copied ? "check" : "copy"} />
+                {copied ? t("home.copied") : t("home.copy")}
+              </button>
+              <a className="btn quiet" href={url} target="_blank" rel="noopener">
+                <Icon name="open" />
+                {t("home.open_shop")}
+              </a>
+            </div>
+            <div className="row">
+              {catalog.published && catalog.feed_url ? (
+                <a className="btn small quiet" href={apiUrl(catalog.feed_url)}><Icon name="download" size={18} />{t("home.feed")}</a>
+              ) : null}
+              {catalog.published ? (
+                <a className="btn small quiet" href={apiUrl(catalog.photos_url)}><Icon name="download" size={18} />{t("home.photos")}</a>
+              ) : null}
+              <Link className="btn small quiet" to="/share"><Icon name="qr" size={18} />{t("nav.share")}</Link>
+            </div>
+            {catalog.published && !catalog.feed_url ? <p className="muted small">{t("home.feed_unavailable")}</p> : null}
+          </>
+        ) : (
+          <p className="muted">{t("home.not_live")}</p>
+        )}
+      </section>
 
       {videos.length === 0 ? (
         <section className="panel">
@@ -152,8 +158,8 @@ export function Home() {
                 <span className="label">{t("home.visits")}</span>
               </div>
               <div>
-                <span className="num">{stats.orders_7d}</span>
-                <span className="label">{t("home.orders")}</span>
+                <span className="num">{formatINR(stats.orders.today_total_inr)}</span>
+                <span className="label">{t("home.sales_today", { count: stats.orders.today_orders })}</span>
               </div>
               <div>
                 <span className="num">{stats.items_live}</span>

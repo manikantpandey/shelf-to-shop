@@ -10,22 +10,32 @@ import {
   type ItemSaved,
   type Moment,
   type PackResult,
+  type ShopSection,
 } from "../api";
 import { Icon } from "../components/Icon";
 import { PriceTag } from "../components/PriceTag";
 
 type Mode = "main" | "moments" | "pack";
 
-type Props = { item: Item; onClose: () => void; onSaved: (item: Item | null, removedId?: string) => void };
+type Props = {
+  item: Item;
+  sections?: ShopSection[];
+  onClose: () => void;
+  onSaved: (item: Item | null, removedId?: string) => void;
+};
 
 /** One item: price, name, sold out, and three ways to get a better photo. */
-export function ItemSheet({ item, onClose, onSaved }: Props) {
+export function ItemSheet({ item, sections = [], onClose, onSaved }: Props) {
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<Mode>("main");
   const [price, setPrice] = useState(item.price_inr?.toString() ?? "");
   const [en, setEn] = useState(item.title_en);
   const [hi, setHi] = useState(item.title_hi);
   const [soldOut, setSoldOut] = useState(item.sold_out);
+  const [mrp, setMrp] = useState(item.mrp_inr?.toString() ?? "");
+  const [section, setSection] = useState(item.section_id ?? "");
+  const [featured, setFeatured] = useState(item.featured);
+  const [hidden, setHidden] = useState(item.hidden);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -62,6 +72,11 @@ export function ItemSheet({ item, onClose, onSaved }: Props) {
     if (en.trim() && en.trim() !== item.title_en) body.title_en = en.trim();
     if (hi.trim() && hi.trim() !== item.title_hi) body.title_hi = hi.trim();
     if (soldOut !== item.sold_out) body.sold_out = soldOut;
+    const mrpValue = Number.parseInt(mrp || "0", 10) || 0;
+    if (mrpValue !== (item.mrp_inr ?? 0)) body.mrp_inr = mrpValue;
+    if (section && section !== item.section_id) body.section_id = section;
+    if (featured !== item.featured) body.featured = featured;
+    if (hidden !== item.hidden) body.hidden = hidden;
     if (!Object.keys(body).length) return onClose();
     void run(() => api<ItemSaved>(`/api/v1/items/${item.id}`, { method: "PATCH", json: body }), t("sheet.saved"));
   };
@@ -115,7 +130,7 @@ export function ItemSheet({ item, onClose, onSaved }: Props) {
               <div className="stack" style={{ gap: 8 }}>
                 {item.price_inr !== null ? <PriceTag value={item.price_inr} size="lg" /> : null}
                 <span className="muted small">
-                  {item.live ? (item.sold_out ? t("items.sold_out") : t("items.on_shop")) : t("items.not_yet")}
+                  {item.hidden ? t("items.hidden") : item.live ? (item.sold_out ? t("items.sold_out") : t("items.on_shop")) : t("items.not_yet")}
                 </span>
                 {item.image_credit ? <span className="credit">{t("sheet.credit", { credit: item.image_credit })}</span> : null}
               </div>
@@ -129,10 +144,12 @@ export function ItemSheet({ item, onClose, onSaved }: Props) {
                   <span>{t("sheet.upload")}<small>{t("sheet.upload_hint")}</small></span>
                   <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden onChange={pickFile} disabled={busy} />
                 </label>
-                <button type="button" className="choice" onClick={() => setMode("moments")} disabled={busy}>
-                  <span className="ic"><Icon name="frame" /></span>
-                  <span>{t("sheet.moment")}<small>{t("sheet.moment_hint")}</small></span>
-                </button>
+                {item.from_video ? (
+                  <button type="button" className="choice" onClick={() => setMode("moments")} disabled={busy}>
+                    <span className="ic"><Icon name="frame" /></span>
+                    <span>{t("sheet.moment")}<small>{t("sheet.moment_hint")}</small></span>
+                  </button>
+                ) : null}
                 <button type="button" className="choice" onClick={() => setMode("pack")} disabled={busy}>
                   <span className="ic"><Icon name="pack" /></span>
                   <span>{t("sheet.pack")}<small>{t("sheet.pack_hint")}</small></span>
@@ -141,10 +158,18 @@ export function ItemSheet({ item, onClose, onSaved }: Props) {
             </section>
 
             <form className="stack" onSubmit={save}>
-              <div className="field">
-                <label htmlFor="i-price">{t("sheet.price")}</label>
-                <input id="i-price" className="price-input" inputMode="numeric" pattern="[0-9]*" value={price}
-                  onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} />
+              <div className="grid-2">
+                <div className="field">
+                  <label htmlFor="i-price">{t("sheet.price")}</label>
+                  <input id="i-price" className="price-input" inputMode="numeric" pattern="[0-9]*" value={price}
+                    onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} />
+                </div>
+                <div className="field">
+                  <label htmlFor="i-mrp">{t("sheet.mrp")}</label>
+                  <input id="i-mrp" inputMode="numeric" pattern="[0-9]*" value={mrp}
+                    onChange={(e) => setMrp(e.target.value.replace(/\D/g, ""))} aria-describedby="i-mrp-hint" />
+                  <span id="i-mrp-hint" className="hint">{t("sheet.mrp_hint")}</span>
+                </div>
               </div>
               <div className="field">
                 <label htmlFor="i-en">{t("sheet.name_en")}</label>
@@ -154,9 +179,25 @@ export function ItemSheet({ item, onClose, onSaved }: Props) {
                 <label htmlFor="i-hi">{t("sheet.name_hi")}</label>
                 <input id="i-hi" lang="hi" value={hi} maxLength={200} onChange={(e) => setHi(e.target.value)} />
               </div>
-              <label className="check">
-                <input type="checkbox" checked={soldOut} onChange={(e) => setSoldOut(e.target.checked)} />
-                <span>{t("sheet.sold_out")}<br /><small className="muted">{t("sheet.sold_out_hint")}</small></span>
+              {sections.length ? (
+                <div className="field">
+                  <label htmlFor="i-sec">{t("sheet.section")}</label>
+                  <select id="i-sec" className="input" value={section} onChange={(e) => setSection(e.target.value)}>
+                    {sections.map((s) => <option key={s.id} value={s.id}>{i18n.language === "hi" ? s.name_hi : s.name_en}</option>)}
+                  </select>
+                </div>
+              ) : null}
+              <label className="switch">
+                <span>{t("sheet.sold_out")}<small>{t("sheet.sold_out_hint")}</small></span>
+                <input type="checkbox" role="switch" checked={soldOut} onChange={(e) => setSoldOut(e.target.checked)} />
+              </label>
+              <label className="switch">
+                <span>{t("sheet.pin")}<small>{t("sheet.pin_hint")}</small></span>
+                <input type="checkbox" role="switch" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
+              </label>
+              <label className="switch">
+                <span>{t("sheet.hide")}<small>{t("sheet.hide_hint")}</small></span>
+                <input type="checkbox" role="switch" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
               </label>
               <button type="submit" className="btn primary" disabled={busy}>{busy ? t("sheet.saving") : t("sheet.save")}</button>
               <button type="button" className="btn danger" onClick={remove} disabled={busy}>{t("sheet.remove")}</button>

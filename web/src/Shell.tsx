@@ -1,19 +1,55 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink } from "react-router-dom";
 
-import { api } from "./api";
+import { api, type OrderSummary } from "./api";
 import { Icon, type IconName } from "./components/Icon";
 import { Signboard } from "./components/Signboard";
 import { setLanguage } from "./i18n";
 import { useSession } from "./session";
 
-const PLACES: { to: string; key: string; icon: IconName }[] = [
+type Place = { to: string; key: string; icon: IconName };
+
+// Laptop sidebar: every place. Phone tab bar: the daily four plus Record; the rest under More.
+const SIDE: Place[] = [
   { to: "/home", key: "nav.home", icon: "home" },
+  { to: "/orders", key: "nav.orders", icon: "orders" },
   { to: "/items", key: "nav.items", icon: "items" },
   { to: "/videos", key: "nav.videos", icon: "videos" },
+  { to: "/shop", key: "nav.shop", icon: "store" },
+  { to: "/share", key: "nav.share", icon: "qr" },
   { to: "/settings", key: "nav.settings", icon: "settings" },
 ];
+const TABS_LEFT: Place[] = [
+  { to: "/home", key: "nav.home", icon: "home" },
+  { to: "/items", key: "nav.items", icon: "items" },
+];
+const TABS_RIGHT: Place[] = [
+  { to: "/orders", key: "nav.orders", icon: "orders" },
+  { to: "/more", key: "nav.more", icon: "more" },
+];
+
+/** New-order count for the Orders badge, refreshed every 30 seconds while the app is open. */
+const NewOrders = createContext(0);
+
+function useNewOrders(enabled: boolean): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let stop = false;
+    const load = () =>
+      api<{ summary: OrderSummary }>("/api/v1/orders?status=new&days=30")
+        .then((d) => !stop && setCount(d.summary.counts.new))
+        .catch(() => undefined);
+    void load();
+    const timer = window.setInterval(load, 30_000);
+    return () => {
+      stop = true;
+      window.clearInterval(timer);
+    };
+  }, [enabled]);
+  return count;
+}
 
 export function LanguageButton({ className = "lang" }: { className?: string }) {
   const { t, i18n } = useTranslation();
@@ -33,6 +69,17 @@ export function LanguageButton({ className = "lang" }: { className?: string }) {
     <button type="button" className={className} onClick={toggle} lang={next}>
       {t("app.switch_language")}
     </button>
+  );
+}
+
+function PlaceLink({ place, badge }: { place: Place; badge?: number }) {
+  const { t } = useTranslation();
+  return (
+    <NavLink to={place.to}>
+      <Icon name={place.icon} />
+      <span>{t(place.key)}</span>
+      {badge ? <span className="badge" aria-label={t("nav.new_orders", { count: badge })}>{badge}</span> : null}
+    </NavLink>
   );
 }
 
@@ -56,70 +103,66 @@ export function Shell({ title, children, board, actions, footer, back, bare = fa
   const { me } = useSession();
   const demo = me?.environment === "demo" || me?.environment === "dev";
   const nav = Boolean(me) && !bare;
+  const newOrders = useNewOrders(nav);
 
   return (
-    <div className={nav ? "app" : "app bare"}>
-      {nav && me ? (
-        <aside className="sidebar" aria-label={t("nav.label")}>
-          <Signboard name={me.workspace.name} compact as="p" />
-          <Link to="/record" className="btn record-btn">
-            <Icon name="record" />
-            {t("nav.record")}
-          </Link>
-          <nav className="side-nav">
-            {PLACES.map((p) => (
-              <NavLink key={p.to} to={p.to}>
-                <Icon name={p.icon} />
-                {t(p.key)}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="side-foot">
-            <LanguageButton className="lang on-board" />
-            {demo ? <span className="demo-note">{t("app.demo_note")}</span> : null}
-          </div>
-        </aside>
-      ) : null}
-
-      <div className="main">
-        <header className={`topbar${board ? " has-board" : ""}`}>
-          {back ? (
-            <Link to={back} className="icon-btn" aria-label={t("app.back")}>
-              <Icon name="back" />
+    <NewOrders.Provider value={newOrders}>
+      <div className={nav ? "app" : "app bare"}>
+        {nav && me ? (
+          <aside className="sidebar" aria-label={t("nav.label")}>
+            <Signboard name={me.workspace.name} compact as="p" />
+            <Link to="/record" className="btn record-btn">
+              <Icon name="record" />
+              {t("nav.record")}
             </Link>
-          ) : null}
-          {board ? <div className="board-slot">{board}</div> : null}
-          <h1 className={board ? "page-title with-board" : "page-title"}>{title}</h1>
-          <LanguageButton />
-        </header>
-        <main className="content">
-          {actions ? <div className="page-actions">{actions}</div> : null}
-          {children}
-        </main>
-        {footer ? <div className="footer">{footer}</div> : null}
-        {nav ? (
-          <nav className="tabbar" aria-label={t("nav.label")}>
-            {PLACES.slice(0, 2).map((p) => (
-              <NavLink key={p.to} to={p.to}>
-                <Icon name={p.icon} />
-                <span>{t(p.key)}</span>
-              </NavLink>
-            ))}
-            <NavLink to="/record" className="tab-record">
-              <span className="dot" aria-hidden="true">
-                <Icon name="record" size={26} />
-              </span>
-              <span>{t("nav.record")}</span>
-            </NavLink>
-            {PLACES.slice(2).map((p) => (
-              <NavLink key={p.to} to={p.to}>
-                <Icon name={p.icon} />
-                <span>{t(p.key)}</span>
-              </NavLink>
-            ))}
-          </nav>
+            <nav className="side-nav">
+              {SIDE.map((p) => (
+                <PlaceLink key={p.to} place={p} badge={p.to === "/orders" ? newOrders : undefined} />
+              ))}
+            </nav>
+            <div className="side-foot">
+              <LanguageButton className="lang on-board" />
+              {demo ? <span className="demo-note">{t("app.demo_note")}</span> : null}
+            </div>
+          </aside>
         ) : null}
+
+        <div className="main">
+          <header className={`topbar${board ? " has-board" : ""}`}>
+            {back ? (
+              <Link to={back} className="icon-btn" aria-label={t("app.back")}>
+                <Icon name="back" />
+              </Link>
+            ) : null}
+            {board ? <div className="board-slot">{board}</div> : null}
+            <h1 className={board ? "page-title with-board" : "page-title"}>{title}</h1>
+            <LanguageButton />
+          </header>
+          <main className="content">
+            {actions ? <div className="page-actions">{actions}</div> : null}
+            {children}
+          </main>
+          {footer ? <div className="footer">{footer}</div> : null}
+          {nav ? (
+            <nav className="tabbar" aria-label={t("nav.label")}>
+              {TABS_LEFT.map((p) => <PlaceLink key={p.to} place={p} />)}
+              <NavLink to="/record" className="tab-record">
+                <span className="dot" aria-hidden="true">
+                  <Icon name="record" size={26} />
+                </span>
+                <span>{t("nav.record")}</span>
+              </NavLink>
+              {TABS_RIGHT.map((p) => (
+                <PlaceLink key={p.to} place={p} badge={p.to === "/orders" ? newOrders : undefined} />
+              ))}
+            </nav>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </NewOrders.Provider>
   );
+}
+
+export function useNewOrderCount(): number {
+  return useContext(NewOrders);
 }

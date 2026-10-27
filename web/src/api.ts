@@ -132,6 +132,10 @@ export type PublicProduct = {
   description_en: string;
   description_hi: string;
   price_display: string;
+  price_paise: number;
+  mrp_display: string | null;
+  section: string | null;
+  featured: boolean;
   image_url: string;
   ai_background: boolean;
   sold_out: boolean;
@@ -141,7 +145,49 @@ export type PublicProduct = {
   order_link_hi: string;
 };
 
-export type PublicShop = { version: number; shop: { name: string; slug: string; whatsapp: string }; products: PublicProduct[] };
+export type Profile = {
+  address: string | null;
+  hours: string | null;
+  delivery: "pickup" | "delivery" | "both";
+  delivery_note: string | null;
+  min_order_inr: number | null;
+  upi_id: string | null;
+  about: string | null;
+  notice: string | null;
+  logo_url: string | null;
+};
+
+export type ShopSection = { id: string; name_en: string; name_hi: string; items?: number };
+
+export type PublicShop = {
+  version: number;
+  shop: { name: string; slug: string; whatsapp: string };
+  products: PublicProduct[];
+  profile: Profile;
+  sections: ShopSection[];
+};
+
+export type OrderLine = { id: string; title: string; qty: number; price_inr: number };
+
+export type Order = {
+  id: string;
+  number: number;
+  created_at: string;
+  customer_name: string | null;
+  note: string | null;
+  items: OrderLine[];
+  total_inr: number;
+  total_display: string;
+  status: "new" | "packed" | "delivered" | "cancelled";
+  paid: boolean;
+};
+
+export type OrderSummary = {
+  counts: Record<Order["status"], number>;
+  today_orders: number;
+  today_total_inr: number;
+  today_paid_inr: number;
+};
 
 export type MyCatalog =
   | { published: false }
@@ -165,7 +211,12 @@ export type Item = {
   title_hi: string;
   price_inr: number | null;
   price_display: string | null;
+  mrp_inr: number | null;
   sold_out: boolean;
+  hidden: boolean;
+  featured: boolean;
+  section_id: string | null;
+  from_video: boolean;
   live: boolean;
   published: boolean;
   category: string;
@@ -193,6 +244,7 @@ export type Stats = {
   spend_usd: string;
   shop_url: string | null;
   published_at: string | null;
+  orders: OrderSummary;
 };
 
 export type VideoSummary = {
@@ -248,19 +300,23 @@ export type JobDetails = {
 export type Moment = { i: number; t_s: number; image_url: string };
 export type PackResult = { code: string; name: string; brand: string | null; image_url: string };
 
-/** Raw image body (the server checks it is really a photo). */
-export async function uploadPhoto(itemId: string, file: Blob): Promise<ItemSaved> {
+/** POST a raw image body (the server checks it is really a photo). */
+export async function uploadImage(path: string, file: Blob): Promise<unknown> {
   const headers: Record<string, string> = { "content-type": file.type || "image/jpeg" };
   if (csrfToken) headers["x-csrf-token"] = csrfToken;
   let res: Response;
   try {
-    res = await fetch(apiUrl(`/api/v1/items/${itemId}/photo`), { method: "POST", headers, body: file, credentials: "include" });
+    res = await fetch(apiUrl(path), { method: "POST", headers, body: file, credentials: "include" });
   } catch {
     throw new ApiError(0, "offline", "No internet connection.");
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) throw new ApiError(res.status, String(data.code ?? "http_error"), String(data.title ?? res.statusText), data);
-  return data as ItemSaved;
+  return data;
+}
+
+export async function uploadPhoto(itemId: string, file: Blob): Promise<ItemSaved> {
+  return (await uploadImage(`/api/v1/items/${itemId}/photo`, file)) as ItemSaved;
 }
 
 /** Public shop page counters (views, order taps). Best effort: never blocks the buyer. */

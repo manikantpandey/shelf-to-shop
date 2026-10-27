@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLIP = path.resolve(HERE, ".fixtures/clip.mp4");
 
-test("seller records, fixes prices, publishes, edits an item; buyer orders on WhatsApp", async ({ page }) => {
+test("seller records, fixes prices, publishes, edits an item; buyer sends a basket order; seller packs it", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/signin$/);
   await page.getByLabel("Start your own shop").fill("Sharma Sarees");
@@ -55,7 +55,7 @@ test("seller records, fixes prices, publishes, edits an item; buyer orders on Wh
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved. Your shop page is updated.")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.locator(".tile", { hasText: "Sold out" })).toHaveCount(1);
+  await expect(page.locator(".tile.soldout")).toHaveCount(1);
 
   // The video's run details show each step and where each price came from.
   await page.goto("/videos");
@@ -63,21 +63,40 @@ test("seller records, fixes prices, publishes, edits an item; buyer orders on Wh
   await expect(page.getByRole("heading", { name: "How it was read" })).toBeVisible();
   await expect(page.locator(".steps li")).toHaveCount(8);
 
+  // A customer: basket of two items, one WhatsApp message, priced by the shop.
+  await page.route(/wa\.me/, (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<p>WhatsApp</p>" }));
   await page.goto("/s/sharma-sarees");
   await expect(page.getByText("₹1,200")).toBeVisible();
   await expect(page.getByText("₹650")).toBeVisible();
-  const order = page.getByRole("link", { name: "Order on WhatsApp" }).first();
-  await expect(order).toHaveAttribute("href", /^https:\/\/wa\.me\/919876543210\?text=/);
   await expect(page.locator(".tile.soldout")).toHaveCount(1);
   // Photos must actually load (published media is served by the API, not the site).
   const photo = page.locator(".tile img").first();
   await expect.poll(() => photo.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Add", exact: true }).first().click();
+  await page.getByRole("button", { name: "One more" }).first().click();
+  await expect(page.locator(".basketbar")).toContainText("2 items");
+  await page.locator(".basketbar .btn").click();
+  await page.getByLabel("Your name (optional)").fill("Ravi");
+  const sent = page.waitForURL(/wa\.me\/919876543210\?text=/);
+  await page.getByRole("button", { name: "Send order on WhatsApp" }).click();
+  await sent;
+  expect(decodeURIComponent(page.url())).toContain("Order #1 for Sharma Sarees");
+
+  // The seller sees it in the order book and moves it along.
+  await page.goto("/orders");
+  await expect(page.getByText("Order #1")).toBeVisible();
+  await expect(page.getByText("Ravi")).toBeVisible();
+  await page.getByRole("button", { name: "Mark packed" }).click();
+  await expect(page.getByText("Order #1")).toHaveCount(0);
+  await page.getByRole("button", { name: /^Packed/ }).click();
+  await expect(page.getByText("Order #1")).toBeVisible();
 
   // Each item has its own page: the link the Meta feed and the WhatsApp message point to.
+  await page.goto("/s/sharma-sarees");
   await page.locator(".tile .photo").first().click();
   await expect(page).toHaveURL(/\/s\/sharma-sarees\/p\/sharma-sarees-[0-9a-f]{8}$/);
-  await expect(page.getByRole("link", { name: "Order on WhatsApp" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "हिंदी" }).click();
-  await expect(page.getByRole("link", { name: "WhatsApp पर ऑर्डर करें" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "जोड़ें", exact: true })).toBeVisible();
 });
