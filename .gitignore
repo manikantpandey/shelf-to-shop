@@ -52,3 +52,7 @@ Thumbs.db
 
 # Local tool settings
 .claude/settings.local.json
+
+# Local project brief (kept out of the public repo)
+claude.md
+CLAUDE.md
