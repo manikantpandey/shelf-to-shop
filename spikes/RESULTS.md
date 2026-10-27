@@ -124,6 +124,34 @@ with no spoken price. Real clips must confirm everything below; TTS mispronounce
    silently.** Cost **$0.09**, wall time **144 s** for 32 s of video (detect 77 s, segment 40 s,
    backdrop 16 s, transcribe 10 s, the rest < 7 s).
 
+## First real seller clips (2026-10-27 night)
+Three WhatsApp-forwarded clips from a kirana shop, in Hinglish (24 s, 49 s, 33 s; WhatsApp shrank them
+to 478×850 at 60 fps). Ground truth below is read from the seller's own speech in the transcripts;
+**please confirm**.
+
+| Clip | Items said | Published by the pipeline | Prices right |
+|---|---|---|---|
+| A | Haldiram's Nut Cracker ₹4, Salted Peanuts ₹4 ("same price"), Punjabi Tadka "same pricing" (pack prints ₹5) | 4, 4, 4; tag ₹5 vs spoken ₹4 flagged | 3/3 |
+| B | MamyPoko ₹10/piece, meat masala 2 for ₹8, ginger-garlic paste ₹12 each ("बारह बारह"), bread ₹15, small Good Day ₹10, toffees ₹100/jar | 10, 8, 12, 15, 10, 100 | 6/6 |
+| C | Pepsi ₹15, Slice ₹20, soda ₹15, big Mirinda ₹50, Mirinda can ₹30 | 15, 20, 15, 50, 30 | 5/5 |
+
+- **14/14 spoken prices right** after two fixes: Hindi number repetition means "each" (the first run
+  read "बारह बारह" as 1212, flagged as implausible, never published silently), and prices are re-read
+  from cached transcripts so parser fixes apply without new ASR calls.
+- Real speech transcribes far better than the TTS stand-in: every price was audible in the
+  transcript. Muse Spark's pairing understood "same price" / "same pricing" and gave the right value.
+- Products: every item the seller talked about was found, plus one extra (B1, a first glimpse of the
+  masala packets with no price of its own) that the review screen would ask about.
+- Cost per clip (incl. reruns while tuning): A $0.08, B $0.15, C $0.11. First full run wall time:
+  117 s, 182 s, 155 s.
+- **Photos are the weak spot**: 9/14 clean cut-outs. Problems: a blue bag segmented instead of B1,
+  a fragmentary transparent Mirinda bottle, the toffee jar not segmented, soft images (478 px source).
+  All weak masks were flagged. Next: try 2–3 nearby frames and keep the best mask; ask sellers to
+  share original videos (WhatsApp "Document" or USB), not WhatsApp-compressed ones.
+- Gaps for kirana stock: bundle prices ("2 masale 8 rupaye") need a quantity on the item; the feed now
+  takes the brand from the pack; Meta categories for drinks, candy, bakery, condiments and diapers
+  were added (verified against Meta's taxonomy).
+
 ### Proposed pipeline (approved Oct 27; built as described, with the changes above)
 1. detect_products: Muse Spark 1.3 video, fps 2 → items, time ranges, best frame, box, tag text.
 2. transcribe: whole-file ENDPOINTING (Hindi + English bias) + pause spans + chunk alignment.

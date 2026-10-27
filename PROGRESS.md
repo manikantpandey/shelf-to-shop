@@ -21,6 +21,37 @@ worktree agents for engine/shelf/web code.
 
 ---
 
+## Session 4: Oct 27 night (first real clips)
+
+### Done
+- Ran the full pipeline on your three kirana clips: **14/14 spoken prices right** (after fixing
+  "बारह बारह" = 12 each), tag ₹5 vs spoken ₹4 flagged, brands read from packs. Write-up in
+  `spikes/RESULTS.md` ("First real seller clips").
+- Fixes: number repetition, prices re-read from cached transcripts (versioned parser), mask fragment
+  cleanup, brand from the pack in the feed, 9 more verified Meta categories, readable CLI feed errors.
+- Hosting decided: AWS EC2 (Mumbai) via CloudFormation you deploy + Cloudflare R2; DNS stays at
+  GoDaddy (`shop.shankhyaai.com`); demo login only for the hackathon.
+
+### Broken / risks
+- Photos: 9/14 clean; wrong object on 1, fragmentary transparent bottle, 1 jar not segmented.
+- WhatsApp-compressed video (478×850) makes soft product photos.
+- Bundle prices ("2 for ₹8") are stored as a plain price.
+
+### Test results
+- `make check` green: pytest **181 passed**, mypy strict, import-linter 2/2, ruff.
+
+### Next 3 tasks
+1. Segment: try 2–3 frames per item and keep the best mask; add quantity ("2 for ₹8") to pairing.
+2. Day 4 web slice + `demo` environment; jobs table and worker handler calling `Pipeline`.
+3. `deploy/`: CloudFormation (EC2, EIP, SG, IAM role with SSM), Docker Compose, Caddy, R2 settings.
+
+### Needed from you
+- Confirm the ground-truth prices in `spikes/RESULTS.md`.
+- Original (not WhatsApp-compressed) copies of the clips if possible.
+- AWS + Cloudflare R2 setup (steps given in chat); Baseten key; spike 5 phone results.
+
+---
+
 ## Session 3: Oct 27 evening (Day 3 pipeline pulled forward, on your go-ahead)
 
 Decisions taken with you: build the pipeline now on the synthetic clip and re-check on real clips;
