@@ -22,6 +22,50 @@ for engine/shelf/web code.
 
 ---
 
+## Session 8: Oct 28 (full test drive with a real long video; refinements)
+
+You asked me to test the whole platform myself with the video in Downloads and to refine it, and you could
+not find the photo options. The video is a 5:31 YouTube store tour by someone else: used for local testing
+only, never committed or shown in the demo.
+
+### Test drive (real models, as a new shop on a phone screen)
+Sign up, setup, camera blocked so gallery upload, pick a minute of a long video, 3.5 min processing ($0.15),
+review with all three photo options, answer five price questions, publish, a customer's basket order, the
+order book. Everything completed; what it surfaced is fixed below.
+
+### Fixed
+- **Photo options were missing where sellers look**: Review now opens the same item sheet as Items (upload
+  own photo, pick a moment from the video, pack photo), "photo may be cut badly" offers Change photo, and a new
+  photo answers that question by itself.
+- **A sign's "20% OFF" became a ₹20 price** with no question asked (worst kind of error). Signs now have their
+  own reader: percentages, weights, pack counts and phone numbers are ignored; ₹/Rs/@/-/MRP mark the price.
+  The rice sack now asks for its price; "SUGAR 5KG @ 225/-" still gives ₹225. 21 sign cases tested, including
+  Devanagari digits.
+- Titles now use the product name printed on a sign ("Madhur sugar 5 kg", not "White sacks on pallet").
+- **Long videos**: uploads up to 10 minutes; the seller picks which minute to use on a slider with the video
+  playing; only that minute is processed (one encode, cached by start time).
+- **Upload errors were invisible**: a failed gallery upload fell back to the camera screen without the reason;
+  it now stays on the video with the message.
+- Job cost was overwritten on reruns instead of added up.
+- Pack photo search ranked "American Garden Pancake Syrup" above olives: product words now outweigh brand.
+- Small uploaded photos were shown as a stamp in a white square; they now fill it.
+- Review said "8 prices need a check" when 3 were photo questions; it now says questions when they are mixed.
+- **Rate limits**: public orders (10 per 10 min per address, 120 per hour per shop), page counters, demo
+  sign-in, uploads and photo changes; customers see a plain "wait a few minutes" message.
+- The language picked on the sign-in page now becomes the shop's language (Hindi users were switched back to
+  English after signing in).
+
+### Test results
+- `make check`: ruff, mypy strict (86 files), import-linter 2/2, pytest **242 passed**.
+- Web: `tsc` clean, vitest 7 passed, build OK. Playwright journey **1 passed**.
+
+### Next 3 tasks
+1. Deploy (runbook 1.1-1.4).
+2. Resumable uploads with IndexedDB keep (a 55 MB video over a shop's mobile data needs it).
+3. Order retention rule + privacy.md/security.md; README with screenshots and the eval table.
+
+---
+
 ## Session 7: Oct 28 (shop management, basket orders, Poppins; recording bug)
 
 You tried the app as a new shop: the upload went back to the record screen, and you asked for a product that a
