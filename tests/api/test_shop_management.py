@@ -226,3 +226,20 @@ def test_basket_orders_are_priced_by_the_shop_and_land_in_the_order_book(
         r = intruder.post("/api/v1/items/bulk", json={"ids": [items[1]["id"]], "action": "hide"},
                           headers=hi)  # fmt: skip
         assert r.status_code == 404
+
+
+def test_public_orders_are_rate_limited(
+    app_and_client: tuple[Any, TestClient], clip: bytes
+) -> None:
+    app, c = app_and_client
+    _shop_with_video(app, c, clip)
+    item = _public(c)["products"][0]["id"]
+    for _ in range(10):
+        r = c.post(
+            "/api/v1/public/shops/gupta-store/orders", json={"items": [{"id": item, "qty": 1}]}
+        )
+        assert r.status_code == 201, r.text
+    r = c.post("/api/v1/public/shops/gupta-store/orders", json={"items": [{"id": item, "qty": 1}]})
+    assert r.status_code == 429 and r.json()["code"] == "too_many"
+    assert r.json()["retry_after_s"] > 0
+    assert "Wait a few minutes" in r.json()["title"]

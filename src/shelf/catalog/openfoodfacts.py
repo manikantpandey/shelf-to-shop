@@ -99,9 +99,14 @@ def _photo(hit: dict[str, Any]) -> PackPhoto | None:
 
 
 def rank(query: str, photos: list[PackPhoto], limit: int = 8) -> list[PackPhoto]:
-    """Most shared words with the query first, Indian products ahead of others on ties."""
+    """Words shared with the product name count double (the brand alone matches every product the
+    brand makes); Indian products first on ties."""
     want = _words(query)
-    scored = {p.code: (len(want & _words(f"{p.name} {p.brand or ''}")), p.india, p) for p in photos}
+    scored = {}
+    for p in photos:
+        name = want & _words(p.name)
+        brand = (want & _words(p.brand or "")) - name
+        scored[p.code] = (2 * len(name) + len(brand), p.india, p)
     best = sorted(scored.values(), key=lambda s: (s[0], s[1]), reverse=True)
     return [p for score, _, p in best if score > 0][:limit]
 

@@ -33,6 +33,14 @@ def _file(fmt: str, size: tuple[int, int] = (640, 480), exif: bool = False) -> b
     return buf.getvalue()
 
 
+def test_small_photos_fill_the_square() -> None:
+    out = square_photo(_file("JPEG", (500, 500)))
+    with Image.open(io.BytesIO(out)) as im:
+        assert im.size == (1024, 1024)
+        # The photo's own colour reaches the edges: it was scaled up, not left small in the middle.
+        assert im.getpixel((5, 5)) != (255, 255, 255)
+
+
 def test_square_photo_pads_to_square_and_drops_exif() -> None:
     out = square_photo(_file("JPEG", (640, 480), exif=True))
     with Image.open(io.BytesIO(out)) as im:
@@ -82,3 +90,15 @@ def test_rank_prefers_matching_words_then_india() -> None:
          photo("33333333", "Haldiram Salted Peanuts", True), photo("44444444", "Peanuts", True)],
     )  # fmt: skip
     assert [p.code for p in ranked] == ["33333333", "44444444", "22222222"]
+
+
+def test_rank_puts_the_product_above_the_brand_name() -> None:
+    def photo(code: str, name: str, brand: str) -> PackPhoto:
+        return PackPhoto(code=code, name=name, brand=brand, image_url=IMG, india=True)
+
+    ranked = rank(
+        "American Garden green olives jar",
+        [photo("11111111", "American Garden Pancake Syrup", "American Garden"),
+         photo("22222222", "Green olives", "American Garden")],
+    )  # fmt: skip
+    assert ranked[0].code == "22222222"

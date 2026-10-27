@@ -42,8 +42,14 @@ from shelf.config import Settings
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.core.ids import uuid7
+from shelf.core.ratelimit import PHOTO_PER_SELLER, limiter
 from shelf.db.models import AuditEvent, FlagRow, Job, Product, Section, Upload
-from shelf.jobs.service import TeeRunLog, providers_for
+from shelf.jobs.service import (
+    TeeRunLog,
+    providers_for,
+    settle_photo_flags,
+    settle_price_flags,
+)
 from shelf.storage import LocalStorage
 
 router = APIRouter(tags=["items"])
@@ -185,6 +191,7 @@ def edit_item(
         p.title_hi = body.title_hi.strip()
     if body.price_inr is not None:
         p.price_inr, p.price_source, p.confidence = body.price_inr, "seller", 1.0
+        settle_price_flags(db, job, p.idx, {"action": "seller_price", "price_inr": body.price_inr})
     if body.mrp_inr is not None:
         p.mrp_inr = body.mrp_inr or None
     if body.sold_out is not None:
@@ -373,6 +380,7 @@ def _set_photo(
     dest.write_bytes(data)
     p.image_key, p.image_source, p.ai_background = key, source, False
     p.image_credit, p.image_credit_url = credit, credit_url
+    settle_photo_flags(db, job, p.idx)
     db.add(
         AuditEvent(
             workspace_id=seller.workspace.id,
@@ -394,6 +402,7 @@ async def upload_photo(
     settings: SettingsDep,
 ) -> dict[str, Any]:
     p, job = _item(db, seller, product_id)
+    limiter(request).hit(PHOTO_PER_SELLER, str(seller.workspace.id))
     if int(request.headers.get("content-length") or 0) > MAX_PHOTO_UPLOAD:
         raise AppError("too_large", "The photo is over 12 MB. Pick a smaller one.", status=413)
     data = bytearray()
@@ -498,6 +507,7 @@ async def photo_from_moment(
     settings: SettingsDep,
 ) -> dict[str, Any]:
     p, job = _item(db, seller, product_id)
+    limiter(request).hit(PHOTO_PER_SELLER, str(seller.workspace.id))
     storage = _storage(request)
     frame = _moment_path(storage, job, p, body.i, "full")
     if not frame.exists():
@@ -579,6 +589,7 @@ async def photo_from_pack(
     settings: SettingsDep,
 ) -> dict[str, Any]:
     p, job = _item(db, seller, product_id)
+    limiter(request).hit(PHOTO_PER_SELLER, str(seller.workspace.id))
     off = _off(request)
     if not valid_barcode(body.code):
         raise AppError("bad_barcode", "A barcode has 8 to 14 digits.", status=422)

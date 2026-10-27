@@ -18,6 +18,7 @@ from shelf.api.deps import SessionDep
 from shelf.api.v1.insights import shop_today
 from shelf.api.v1.shop import profile_out
 from shelf.core.errors import AppError
+from shelf.core.ratelimit import EVENT_PER_IP, ORDER_PER_IP, ORDER_PER_SHOP, client_ip, limiter
 from shelf.db.models import Catalog, Order, Section, ShopCounter, Workspace
 from shelf.storage import LocalStorage
 
@@ -109,8 +110,9 @@ class ShopEvent(BaseModel):
 
 
 @router.post("/shops/{slug}/events", status_code=204)
-def count_event(slug: str, body: ShopEvent, db: SessionDep) -> Response:
+def count_event(slug: str, body: ShopEvent, request: Request, db: SessionDep) -> Response:
     """Add one to today's page views or order taps. Only totals are kept: no visitor data."""
+    limiter(request).hit(EVENT_PER_IP, client_ip(request))
     ws = _shop(db, slug)
     latest = _latest(db, ws) if ws is not None else None
     if ws is None or latest is None:
@@ -200,6 +202,8 @@ def _clean(text: str | None) -> str | None:
 def place_order(slug: str, body: Basket, request: Request, db: SessionDep) -> dict[str, Any]:
     """A customer's basket: priced from the published shop (never from the browser), numbered,
     saved to the seller's order book, and turned into one WhatsApp message."""
+    limiter(request).hit(ORDER_PER_IP, client_ip(request))
+    limiter(request).hit(ORDER_PER_SHOP, slug)
     ws = _shop(db, slug)
     latest = _latest(db, ws) if ws is not None else None
     if ws is None or latest is None or not ws.whatsapp:
