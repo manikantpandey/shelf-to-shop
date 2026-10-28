@@ -13,6 +13,7 @@ storage/
 
 # Sample media: only clips with written permission, and never in git
 evals/videos/
+evals/out/
 spikes/media/
 spikes/out/
 **/*.mp4
