@@ -266,7 +266,13 @@
     "use_minute": "Use this minute",
     "clip_body": "Your video is {{length}} long. We make your items from {{clip}} seconds of it. Slide to where your shelf and prices are.",
     "clip_from": "Using {{from}} to {{to}}",
-    "clip_hint": "Play the video to check this part shows your items and you say the prices."
+    "clip_hint": "Play the video to check this part shows your items and you say the prices.",
+    "resume": "Carry on uploading",
+    "upload_paused": "Upload stopped: the connection dropped. Your video is safe on this phone.",
+    "saved_on_phone": "Your video is saved on this phone. Carry on when you have signal; nothing is lost.",
+    "leftover_title": "Finish your last upload",
+    "discard": "Discard it",
+    "leftover_body": "A video from {{when}} ({{size}} MB) did not finish uploading. It is still on this phone."
   },
   "processing": {
     "title": "Making your items",

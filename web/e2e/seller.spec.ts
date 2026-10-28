@@ -100,3 +100,34 @@ test("seller records, fixes prices, publishes, edits an item; buyer sends a bask
   await page.getByRole("button", { name: "हिंदी" }).click();
   await expect(page.getByRole("button", { name: "जोड़ें", exact: true })).toBeVisible();
 });
+
+test("an upload survives a dropped connection and a closed tab", async ({ page }) => {
+  await page.goto("/signin");
+  await page.getByLabel("Start your own shop").fill("Patchy Network Store");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByLabel("I agree").check();
+  await page.getByLabel("WhatsApp number for orders").fill("98765 43210");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.waitForURL(/\/home$/);
+  await page.goto("/record");
+  await page.getByRole("button", { name: "I agree, open camera" }).click();
+  await expect(page.getByRole("button", { name: "Record" })).toBeEnabled();
+
+  // The network drops whenever a piece of the video is sent.
+  await page.route(/\/api\/v1\/uploads\/[^/]+$/, (route) =>
+    route.request().method() === "PATCH" ? route.abort("internetdisconnected") : route.continue());
+  await page.locator('input[type="file"]').setInputFiles(CLIP);
+  await expect(page.getByText("Upload stopped: the connection dropped.")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("button", { name: "Carry on uploading" })).toBeVisible();
+
+  // The seller closes the app; the video is still on the phone when they come back.
+  await page.unroute(/\/api\/v1\/uploads\/[^/]+$/);
+  await page.goto("/record");
+  await expect(page.getByRole("heading", { name: "Finish your last upload" })).toBeVisible();
+  await page.getByRole("button", { name: "Carry on uploading" }).click();
+  await expect(page.getByRole("heading", { name: "Making your items" })).toBeVisible({ timeout: 30_000 });
+
+  // Once the server has it, the saved copy is gone: no second offer.
+  await page.goto("/record");
+  await expect(page.getByRole("heading", { name: "Finish your last upload" })).toHaveCount(0);
+});

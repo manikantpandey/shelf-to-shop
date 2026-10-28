@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
-import { api, ApiError, uploadVideo, type Job } from "../api";
+import { api, ApiError, type Job } from "../api";
 import { Icon } from "../components/Icon";
 import { cameraProblem, pickMimeType, type CameraProblem } from "../recorder/mime";
+import { forgetRecording, keepRecording, pendingRecording, rememberUpload, type Pending } from "../recordings";
+import { resumableUpload } from "../uploader";
 import { useSession } from "../session";
 import { Shell } from "../Shell";
 import { clock as clockText } from "./Videos";
@@ -27,6 +29,9 @@ export function Record() {
   // A long upload: which minute of it to use.
   const [long, setLong] = useState<{ id: string; duration: number; clip: number } | null>(null);
   const [start, setStart] = useState(0);
+  const [leftover, setLeftover] = useState<Pending | null>(null);
+  const [paused, setPaused] = useState(false);
+  const uploadId = useRef<string | undefined>(undefined);
   const clipRef = useRef<HTMLVideoElement>(null);
 
   const liveRef = useRef<HTMLVideoElement>(null);
@@ -110,6 +115,13 @@ export function Record() {
     if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
   }, [stopCamera]);
 
+  // A video that did not finish uploading last time is still on this phone: offer to finish it.
+  useEffect(() => {
+    void pendingRecording().then((p) => {
+      if (p && p.blob.size) setLeftover(p);
+    });
+  }, []);
+
   const agree = async () => {
     try {
       await api("/api/v1/consents/recording", { method: "POST" });
@@ -171,6 +183,8 @@ export function Record() {
 
   const retake = () => {
     setVideo(null);
+    uploadId.current = undefined;
+    void forgetRecording();
     void startCamera();
   };
 
@@ -179,12 +193,25 @@ export function Record() {
     navigate(`/jobs/${job.id}`);
   };
 
-  const send = async (blob: Blob) => {
+  const send = async (blob: Blob, resumeId?: string) => {
     setPhase("uploading");
     setError("");
+    setPaused(false);
     setProgress(0);
     try {
-      const upload = await uploadVideo(blob, setProgress);
+      // Keep the video on the phone until the server has all of it.
+      if (!resumeId) await keepRecording(blob);
+      const upload = await resumableUpload(blob, {
+        onProgress: setProgress,
+        resumeId: resumeId ?? uploadId.current,
+        onSession: (id) => {
+          uploadId.current = id;
+          void rememberUpload(id);
+        },
+      });
+      uploadId.current = undefined;
+      await forgetRecording();
+      setLeftover(null);
       if (upload.needs_clip) {
         setLong({ id: upload.id, duration: upload.duration_s, clip: upload.max_clip_s });
         setStart(0);
@@ -193,11 +220,32 @@ export function Record() {
       }
       await makeJob(upload.id);
     } catch (err) {
-      const message = err instanceof ApiError && err.status === 422 ? err.message : t("record.upload_failed");
-      setError(message);
+      const offline = !(err instanceof ApiError) || err.status === 0;
+      if (!offline) {
+        // The server refused the video: start fresh next time, and drop the saved copy.
+        uploadId.current = undefined;
+        await forgetRecording();
+      }
+      setPaused(offline);
+      setError(offline ? t("record.upload_paused") : err.message);
       // Always come back to the video with the reason shown (never silently to the camera).
       setPhase("preview");
     }
+  };
+
+  const resumeLeftover = () => {
+    if (!leftover) return;
+    stopCamera();
+    setVideo(leftover.blob);
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = URL.createObjectURL(leftover.blob);
+    uploadId.current = leftover.uploadId;
+    void send(leftover.blob, leftover.uploadId);
+  };
+
+  const discardLeftover = async () => {
+    await forgetRecording();
+    setLeftover(null);
   };
 
   const chooseClip = async () => {
@@ -216,6 +264,7 @@ export function Record() {
     if (file) {
       stopCamera();
       setVideo(file);
+      uploadId.current = undefined;
       if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
       previewUrl.current = URL.createObjectURL(file);
       void send(file);
@@ -309,19 +358,36 @@ export function Record() {
           ) : (
             <>
               <button type="button" className="btn" onClick={retake}>{t("record.retake")}</button>
-              <button type="button" className="btn primary" onClick={() => video && void send(video)}>{t("record.use")}</button>
+              <button type="button" className="btn primary" onClick={() => video && void send(video, uploadId.current)}>
+                {paused ? t("record.resume") : t("record.use")}
+              </button>
             </>
           )
         }
       >
         {previewUrl.current ? <video src={previewUrl.current} controls playsInline className="preview" /> : null}
-        <p>{t("record.preview_hint")}</p>
+        {paused ? <p className="muted">{t("record.saved_on_phone")}</p> : <p>{t("record.preview_hint")}</p>}
         {error ? <p className="error" role="alert">{error}</p> : null}
       </Shell>
     );
   }
 
   const recording = phase === "recording";
+  if (leftover && !recording) {
+    return (
+      <Shell
+        title={t("record.leftover_title")}
+        footer={
+          <>
+            <button type="button" className="btn" onClick={() => void discardLeftover()}>{t("record.discard")}</button>
+            <button type="button" className="btn primary" onClick={resumeLeftover}>{t("record.resume")}</button>
+          </>
+        }
+      >
+        <p>{t("record.leftover_body", { when: new Date(leftover.savedAt).toLocaleString(), size: Math.max(1, Math.round(leftover.blob.size / 1048576)) })}</p>
+      </Shell>
+    );
+  }
   return (
     <div className="recorder dark">
       <div className="bar">

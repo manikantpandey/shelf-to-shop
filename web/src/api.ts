@@ -7,6 +7,10 @@ export function setCsrf(token: string | undefined): void {
   csrfToken = token ?? "";
 }
 
+export function csrfHeaders(): Record<string, string> {
+  return csrfToken ? { "x-csrf-token": csrfToken } : {};
+}
+
 export function apiUrl(path: string): string {
   return path.startsWith("http") ? path : `${BASE}${path}`;
 }
@@ -51,30 +55,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-export type UploadResult = { id: string; duration_s: number; needs_clip: boolean; max_clip_s: number };
-
-export function uploadVideo(blob: Blob, onProgress: (fraction: number) => void): Promise<UploadResult> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", apiUrl("/api/v1/uploads"));
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("content-type", blob.type || "video/mp4");
-    if (csrfToken) xhr.setRequestHeader("x-csrf-token", csrfToken);
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.onload = () => {
-      let data: Record<string, unknown> = {};
-      try {
-        data = JSON.parse(xhr.responseText);
-      } catch {
-        /* ignore */
-      }
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data as UploadResult);
-      else reject(new ApiError(xhr.status, String(data.code ?? "http_error"), String(data.title ?? "Upload failed")));
-    };
-    xhr.onerror = () => reject(new ApiError(0, "offline", "No internet connection."));
-    xhr.send(blob);
-  });
-}
+export type UploadResult = { id: string; duration_s: number; needs_clip: boolean; max_clip_s: number; status?: string };
 
 // --- Shapes returned by the API ---------------------------------------------------------
 export type Workspace = {
