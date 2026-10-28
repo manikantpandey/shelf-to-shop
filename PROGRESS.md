@@ -22,6 +22,51 @@ for engine/shelf/web code.
 
 ---
 
+## Session 10: Oct 29 (evals on the labelled clips, fewer needless questions, README)
+
+### Done
+- **Eval runner** (`evals/run_evals.py`, scoring in `evals/scoring.py`, 7 unit tests): runs each labelled
+  clip through the real pipeline, pairs detected items with labelled ones by shared screen time and
+  description, and gives every priced item one outcome: right, asked the seller, or wrong without a
+  question. Writes `evals/report.md`; stages are cached per clip, so re-scoring after a matcher change is
+  free.
+- **First run (before fixes)**: 20 of 21 items found, 0 wrong prices published silently, but 12 of 20
+  prices became questions, most of them needless. Causes and fixes:
+  - Packs printed "₹5/- ONLY", seller says "chaar rupaye": every item was a "conflict". A spoken price
+    below the printed one (and at least half of it) is now a discount off the MRP; the tag becomes the
+    MRP (struck through on the shop page, shown under the item in Review). Above the printed price, or
+    far below it, is still a question.
+  - "Same price" said with two items on screen asked "which item?" even when both ended up at that price.
+  - A ₹100 toffee jar among ₹10 items was questioned as unusual although the audio and the video model
+    heard the same number.
+- **Second run (after fixes)**: 21 of 21 labelled items found, **17 of 20 prices right, 3 asked, 0 wrong
+  without a question**, seeded traps 5 of 5; 138 s of video in 11.5 min, $0.45. The synthetic clip then
+  showed a hole in the new MRP rule (1002 heard, 1200 paired by the video model, tag 1100 became an MRP);
+  a price already in question is never read as a discount now. Both runs together cost about $0.95.
+- README: problem with sources, quickstart, screens, architecture and pipeline diagrams, which Meta model
+  does what and why, eval table, security summary, limitations, roadmap, hackathon statement.
+
+### Broken / risks
+- The eval set is 4 short clips, and the fixes were made on the same clips: a check, not a held-out test.
+  On-screen times in the real clips' labels came from a detection run, so recall there is optimistic.
+- Fewer questions also means the sample shop's third clip may arrive with nothing to fix; the demo of
+  "Fix prices" may need a clip where the seller really says a price above the printed one.
+- Hindi numbers cut at a pause ("ek hazaar do" without "sau") are read as 1002; caught here only because
+  the video model disagreed.
+
+### Test results
+- `make check`: ruff, mypy strict (90 files), import-linter 2/2, pytest **263 passed** (7 eval-scoring
+  and 8 new matcher tests).
+- Web: `tsc` clean, vitest **13 passed**, Playwright **2 passed** (the journey's test shop now has a real
+  conflict: said above the printed price).
+
+### Next 3 tasks
+1. Deploy (runbook 1.1-1.4), then a real Commerce Manager upload of the feed.
+2. Spike 5 on a real Android phone over HTTPS (mimeType, file size for 60 s).
+3. Email one-time-code sign-in, or daily spend caps, whichever the demo needs first.
+
+---
+
 ## Session 9: Oct 28-29 (resumable uploads, privacy, security audit)
 
 ### Done
