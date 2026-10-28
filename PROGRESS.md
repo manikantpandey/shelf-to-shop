@@ -71,7 +71,9 @@ for engine/shelf/web code.
 ### Next 3 tasks
 1. Deploy (runbook 1.1-1.4), then a real Commerce Manager upload of the feed.
 2. Spike 5 on a real Android phone over HTTPS (mimeType, file size for 60 s).
-3. Email one-time-code sign-in (the last "not done" item in security.md that the brief requires).
+3. `docs/integration/phoenix.md` as a design doc (tool manifest, keys, HMAC, webhooks, review link); the
+   socialpulse code only if everything else is green. (Email sign-in stays after the hackathon: demo
+   sign-in was your choice for the event.)
 
 ---
 
