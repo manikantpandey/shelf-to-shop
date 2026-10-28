@@ -274,3 +274,12 @@ def test_a_far_off_price_is_asked_unless_audio_and_video_agree() -> None:
     assert "implausible_price" not in {f.kind for f in agreed}
     heard_once = verify(prods, [*cheap, _priced(3, 100, 0.75)], [], [])
     assert ("implausible_price", 3) in {(f.kind, f.product_idx) for f in heard_once}
+
+
+def test_a_disputed_price_is_not_read_as_a_discount() -> None:
+    # synth_a: the transcript dropped "sau" (1002), the video model heard 1200, the tag says 1100.
+    prod = _tagged(1100).model_copy(update={"spark_price_inr": 1200})
+    result = match_prices([prod], _single_mention(2.0, 1002))
+    [d] = result.decisions
+    assert d.mrp_inr is None
+    assert [f.question_key for f in result.flags] == ["flag.price_conflict.vision"]

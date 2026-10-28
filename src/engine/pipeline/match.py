@@ -164,6 +164,7 @@ def _decide(
                                  snippet=product.tag_text))  # fmt: skip
 
     price: int | None
+    questions_before = len(flags)
     if heard:
         top = heard[0][1]
         price, source = top.value_inr, "spoken"
@@ -194,10 +195,15 @@ def _decide(
     else:
         price, source, confidence = None, "none", 0.0
 
+    # A price the seller is already asked about is not a discount yet (synth_a: "ek hazaar do sau"
+    # heard as 1002, below the 1100 tag, while the video model heard 1200).
+    disputed = len(flags) > questions_before
     printed = tag_mrp(product.tag_text)
     mrp = printed if printed is not None and price is not None and printed > price else None
     tag = product.tag_price_inr
-    if tag is not None and price is not None and tag != price:
+    if disputed:
+        mrp = None
+    elif tag is not None and price is not None and tag != price:
         if source != "tag" and tag * MIN_SHARE_OF_PRINTED <= price < tag:
             # A printed price is the most an item sells for (the MRP on packed goods); saying
             # less is an ordinary discount, so the tag becomes the MRP instead of a question.

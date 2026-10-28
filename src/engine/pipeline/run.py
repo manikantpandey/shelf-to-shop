@@ -217,7 +217,7 @@ class Pipeline:
         # Match with colours read from each product's photo, not the detector's text.
         photo_colours = {e.product_idx: e.colour for e in enriched.items}
         matched = await self._stage(
-            "match", 3,
+            "match", 4,
             {"detect": self.hashes["detect"], "transcribe": self.hashes["transcribe"],
              "enrich": self.hashes["enrich"], "parser": PARSER_VERSION, "tags": TAG_PARSER_VERSION},
             MatchOut, lambda: self._match(products, transcript, photo_colours),
