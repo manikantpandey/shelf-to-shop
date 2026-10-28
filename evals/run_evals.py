@@ -137,7 +137,7 @@ def main() -> int:
         return 1
     text = report(scores)
     if not wanted:
-        (ROOT / "report.md").write_text("# Evals\n\n" + text, encoding="utf-8")
+        (ROOT / "report.md").write_text("# Evals\n\n" + text, encoding="utf-8", newline="\n")
     print(text)
     return 0
 
