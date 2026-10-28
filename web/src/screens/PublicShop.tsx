@@ -35,21 +35,29 @@ function useBasket(slug: string): [Basket, (id: string, qty: number) => void, ()
       return {};
     }
   });
-  useEffect(() => {
+  // Saved at once, not after the next render: sending an order navigates straight to WhatsApp, and
+  // a basket saved later would come back full (and could be sent twice).
+  const save = (next: Basket) => {
     try {
-      localStorage.setItem(key, JSON.stringify(basket));
+      if (Object.keys(next).length) localStorage.setItem(key, JSON.stringify(next));
+      else localStorage.removeItem(key);
     } catch {
       /* storage blocked: the basket lives for this visit only */
     }
-  }, [key, basket]);
+  };
   const set = (id: string, qty: number) =>
     setBasket((b) => {
       const next = { ...b };
       if (qty <= 0) delete next[id];
       else next[id] = Math.min(99, qty);
+      save(next);
       return next;
     });
-  return [basket, set, () => setBasket({})];
+  const clear = () => {
+    save({});
+    setBasket({});
+  };
+  return [basket, set, clear];
 }
 
 function Stepper({ qty, onChange, label }: { qty: number; onChange: (n: number) => void; label: string }) {
