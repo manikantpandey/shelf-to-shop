@@ -22,6 +22,37 @@ for engine/shelf/web code.
 
 ---
 
+## Session 9: Oct 28-29 (resumable uploads, privacy, security audit)
+
+### Done
+- **Resumable uploads**: the video goes in 4 MB pieces; after a dropped connection the phone asks the
+  server where to carry on, and a retried piece is never written twice (409 gives the right offset). The
+  recording stays on the phone (IndexedDB) until the server has it all; coming back after a closed tab
+  offers "Finish your last upload". Browser test drops the network mid-upload, reloads, and finishes.
+- **Retention** (hourly in the worker): shop videos, their audio and every frame that may show people go
+  after the shop's retention period (item photos and prices stay); unfinished uploads after a day;
+  customer names and notes on orders after 90 days; ended sessions after 30 days.
+- **Download all my data** (zip: JSON + item photos) and **Delete my shop** (type the shop name; removes
+  every row and file, signs out, keeps an audit line without personal data), in Settings.
+- `docs/security.md` (ASVS 5.0 L2 mapping and honest gaps) and `docs/privacy.md` (DPDP: what, why, how
+  long, processors, rights, AI labelling).
+- CI now also runs **pip-audit** (no known vulnerabilities) and **Semgrep** (python, typescript, react,
+  secrets packs: 128 files, 0 findings), both failing the build on findings.
+- **Bug found by the browser test**: after sending an order the basket came back full (it was saved after
+  the page had already gone to WhatsApp), so a customer could send the same order twice. Saved at once now.
+- The journey test used a fixed shop name, so reruns met an earlier run's shop; each run now has its own.
+
+### Test results
+- `make check`: pytest **248 passed**, mypy strict (90 files), import-linter 2/2, ruff.
+- Web: vitest **13 passed** (6 new uploader tests), build OK. Playwright **2 passed** (repeated runs too).
+
+### Next 3 tasks
+1. Deploy (runbook 1.1-1.4).
+2. README with screenshots, architecture diagram and the eval table.
+3. Evals on the labelled clips (recall, precision, price accuracy, cost, time).
+
+---
+
 ## Session 8: Oct 28 (full test drive with a real long video; refinements)
 
 You asked me to test the whole platform myself with the video in Downloads and to refine it, and you could
