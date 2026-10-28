@@ -72,13 +72,19 @@ export function LanguageButton({ className = "lang" }: { className?: string }) {
   );
 }
 
-function PlaceLink({ place, badge }: { place: Place; badge?: number }) {
+function PlaceLink({ place, badge, tab = false }: { place: Place; badge?: number; tab?: boolean }) {
   const { t } = useTranslation();
+  // Tab taps run as a view transition, so the mark slides from the old tab to the new one.
   return (
-    <NavLink to={place.to}>
-      <Icon name={place.icon} />
-      <span>{t(place.key)}</span>
-      {badge ? <span className="badge" aria-label={t("nav.new_orders", { count: badge })}>{badge}</span> : null}
+    <NavLink to={place.to} viewTransition={tab}>
+      {({ isActive }) => (
+        <>
+          {tab && isActive ? <span className="tab-mark" aria-hidden="true" /> : null}
+          <Icon name={place.icon} />
+          <span>{t(place.key)}</span>
+          {badge ? <span className="badge" aria-label={t("nav.new_orders", { count: badge })}>{badge}</span> : null}
+        </>
+      )}
     </NavLink>
   );
 }
@@ -145,7 +151,7 @@ export function Shell({ title, children, board, actions, footer, back, bare = fa
           {footer ? <div className="footer">{footer}</div> : null}
           {nav ? (
             <nav className="tabbar" aria-label={t("nav.label")}>
-              {TABS_LEFT.map((p) => <PlaceLink key={p.to} place={p} />)}
+              {TABS_LEFT.map((p) => <PlaceLink key={p.to} place={p} tab />)}
               <NavLink to="/record" className="tab-record">
                 <span className="dot" aria-hidden="true">
                   <Icon name="record" size={26} />
@@ -153,7 +159,7 @@ export function Shell({ title, children, board, actions, footer, back, bare = fa
                 <span>{t("nav.record")}</span>
               </NavLink>
               {TABS_RIGHT.map((p) => (
-                <PlaceLink key={p.to} place={p} badge={p.to === "/orders" ? newOrders : undefined} />
+                <PlaceLink key={p.to} place={p} badge={p.to === "/orders" ? newOrders : undefined} tab />
               ))}
             </nav>
           ) : null}

@@ -60,10 +60,15 @@ function useBasket(slug: string): [Basket, (id: string, qty: number) => void, ()
   return [basket, set, clear];
 }
 
-function Stepper({ qty, onChange, label }: { qty: number; onChange: (n: number) => void; label: string }) {
+function Stepper({ qty, onChange, label, fresh = false }: {
+  qty: number;
+  onChange: (n: number) => void;
+  label: string;
+  fresh?: boolean;
+}) {
   const { t } = useTranslation();
   return (
-    <div className="stepper" role="group" aria-label={label}>
+    <div className={fresh ? "stepper fresh" : "stepper"} role="group" aria-label={label}>
       <button type="button" onClick={() => onChange(qty - 1)} aria-label={t("shop.less")}>−</button>
       <span aria-live="polite">{qty}</span>
       <button type="button" onClick={() => onChange(qty + 1)} aria-label={t("shop.more_qty")}>+</button>
@@ -71,15 +76,16 @@ function Stepper({ qty, onChange, label }: { qty: number; onChange: (n: number) 
   );
 }
 
-function AddButton({ product, qty, onChange, hindi }: {
+function AddButton({ product, qty, onChange, hindi, fresh = false }: {
   product: PublicProduct;
   qty: number;
   onChange: (n: number) => void;
   hindi: boolean;
+  fresh?: boolean;
 }) {
   const { t } = useTranslation();
   if (product.sold_out) return <span className="btn" aria-disabled="true">{t("shop.sold_out")}</span>;
-  if (qty > 0) return <Stepper qty={qty} onChange={onChange} label={hindi ? product.title_hi : product.title_en} />;
+  if (qty > 0) return <Stepper qty={qty} onChange={onChange} label={hindi ? product.title_hi : product.title_en} fresh={fresh} />;
   return (
     <button type="button" className="btn primary" onClick={() => onChange(1)}>
       <Icon name="plus" size={18} />
@@ -97,12 +103,13 @@ function Price({ product, big = false }: { product: PublicProduct; big?: boolean
   );
 }
 
-function Tile({ slug, product, hindi, qty, onQty }: {
+function Tile({ slug, product, hindi, qty, onQty, fresh }: {
   slug: string;
   product: PublicProduct;
   hindi: boolean;
   qty: number;
   onQty: (n: number) => void;
+  fresh: boolean;
 }) {
   const { t } = useTranslation();
   const title = hindi ? product.title_hi : product.title_en;
@@ -122,7 +129,7 @@ function Tile({ slug, product, hindi, qty, onQty }: {
           {product.mrp_display ? <>{t("shop.mrp")} <s>{product.mrp_display}</s></> : product.ai_background ? t("shop.ai_label") : " "}
         </span>
         <div className="tile-action">
-          <AddButton product={product} qty={qty} onChange={onQty} hindi={hindi} />
+          <AddButton product={product} qty={qty} onChange={onQty} hindi={hindi} fresh={fresh} />
         </div>
       </div>
     </article>
@@ -238,6 +245,23 @@ function BasketSheet({ shop, basket, setQty, clear, onClose, hindi }: {
   );
 }
 
+function BasketBar({ count, total, onOpen, tapped }: { count: number; total: number; onOpen: () => void; tapped: boolean }) {
+  const { t } = useTranslation();
+  // Rises only when a tap made it appear, not when a saved basket comes back on reload.
+  const [rise] = useState(tapped);
+  return (
+    <div className={rise ? "basketbar rise" : "basketbar"}>
+      <button type="button" className="btn primary" onClick={onOpen}>
+        <span>
+          <Icon name="basket" size={20} />{" "}
+          <span key={count} className={tapped ? "bump" : undefined}>{t("shop.items_count", { count })}</span>
+        </span>
+        <span>{t("shop.view_basket", { total: formatINR(total) })}</span>
+      </button>
+    </div>
+  );
+}
+
 /** The page buyers open from WhatsApp or Instagram: the shop's board, sections, a basket. */
 export function PublicShop() {
   const { t, i18n } = useTranslation();
@@ -248,6 +272,11 @@ export function PublicShop() {
   const [section, setSection] = useState("");
   const [open, setOpen] = useState(false);
   const [basket, setQty, clear] = useBasket(slug);
+  const [tapped, setTapped] = useState(false);
+  const change = (id: string, qty: number) => {
+    setTapped(true);
+    setQty(id, qty);
+  };
   const hindi = i18n.language === "hi";
 
   useEffect(() => {
@@ -333,7 +362,7 @@ export function PublicShop() {
                 {product.sold_out ? <p className="error">{t("shop.sold_out_long")}</p> : null}
                 <p>{hindi ? product.description_hi : product.description_en}</p>
                 <div style={{ maxWidth: 260 }}>
-                  <AddButton product={product} qty={basket[product.id] ?? 0} onChange={(n) => setQty(product.id, n)} hindi={hindi} />
+                  <AddButton product={product} qty={basket[product.id] ?? 0} onChange={(n) => change(product.id, n)} hindi={hindi} fresh={tapped} />
                 </div>
                 {product.ai_background ? <p className="credit">{t("shop.ai_long")}</p> : null}
                 {product.image_credit ? (
@@ -351,7 +380,7 @@ export function PublicShop() {
                 <h2 id="more-h">{t("shop.more")}</h2>
                 <div className="tiles">
                   {others.map((p) => (
-                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => setQty(p.id, n)} />
+                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} />
                   ))}
                 </div>
               </section>
@@ -384,7 +413,7 @@ export function PublicShop() {
                 </div>
                 <div className="tiles wide">
                   {list.map((p) => (
-                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => setQty(p.id, n)} />
+                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} />
                   ))}
                 </div>
               </section>
@@ -393,14 +422,7 @@ export function PublicShop() {
         ) : null}
         <p className="credit">{t("shop.made_with")}</p>
       </main>
-      {count > 0 && shop ? (
-        <div className="basketbar">
-          <button type="button" className="btn primary" onClick={() => setOpen(true)}>
-            <span><Icon name="basket" size={20} /> {t("shop.items_count", { count })}</span>
-            <span>{t("shop.view_basket", { total: formatINR(total) })}</span>
-          </button>
-        </div>
-      ) : null}
+      {count > 0 && shop ? <BasketBar count={count} total={total} onOpen={() => setOpen(true)} tapped={tapped} /> : null}
       {open && shop ? (
         <BasketSheet shop={shop} basket={basket} setQty={setQty} clear={clear} onClose={() => setOpen(false)} hindi={hindi} />
       ) : null}

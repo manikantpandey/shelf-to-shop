@@ -735,3 +735,35 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
   .foot-links { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .foot-board span { font-size: min(10.4vw, 12rem); }
 }
+
+/* --- Revision 4: feedback for taps (each answers a touch; none plays by itself) ----------- */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .chip, .choice, .tile, .demo-steps button, .stepper button, .shutter { transition: transform 120ms ease-out; }
+  .btn:active:not(:disabled), .chip:active, .choice:active, .demo-steps button:active, .stepper button:active { transform: scale(0.97); }
+  .tile:active { transform: scale(0.985); }
+  .shutter:active { transform: scale(0.94); }
+  .stepper.fresh { animation: swap 200ms ease-out; }
+  .basketbar.rise { animation: rise-in 240ms ease-out; }
+  .bump { display: inline-block; animation: bump 280ms cubic-bezier(.3, 1.6, .5, 1); }
+  .pricetag.stamp { transform-origin: left center; animation: stamp 320ms cubic-bezier(.3, 1.6, .5, 1); }
+  .steps li.done .n path { stroke-dasharray: 24; animation: draw 360ms ease-out; }
+  .progress span { transition-duration: 600ms; }
+}
+@keyframes bump { 40% { transform: scale(1.18); } }
+@keyframes draw { from { stroke-dashoffset: 24; } }
+
+/* Recorder: the time left as a ring around the record button. */
+.shutter { position: relative; }
+.shutter .ring { position: absolute; inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); transform: rotate(-90deg);
+  pointer-events: none; }
+.shutter .ring circle { fill: none; stroke: var(--marigold); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100;
+  transition: stroke-dashoffset 1s linear; }
+
+/* Tab bar: the mark under the current tab slides to the tapped one (a view transition; nothing else moves). */
+.tabbar .tab-mark { position: absolute; top: -1px; left: 50%; width: 36px; height: 3px; margin-left: -18px;
+  border-radius: 0 0 3px 3px; background: var(--board); view-transition-name: tab-mark; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(tab-mark) { animation-duration: 220ms; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { api, type Job } from "../api";
+import { Icon } from "../components/Icon";
 import { Shell } from "../Shell";
 
 export const STAGES = ["ingest", "detect", "transcribe", "segment", "enrich", "match", "verify", "backgrounds"];
@@ -53,6 +54,7 @@ export function Processing() {
   };
 
   const failed = job?.status === "failed";
+  const done = STAGES.filter((s) => state(job?.stages[s]) === "done").length;
   return (
     <Shell
       title={t("processing.title")}
@@ -60,10 +62,17 @@ export function Processing() {
       footer={failed ? <button type="button" className="btn primary" onClick={retry}>{t("processing.try_again")}</button> : undefined}
     >
       <p className="muted">{failed ? null : t("processing.hint")}</p>
+      <div className="stack" style={{ gap: 6 }}>
+        <span className="small">{t("processing.progress", { done, total: STAGES.length })}</span>
+        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={STAGES.length} aria-valuenow={done}
+          aria-label={t("processing.title")}>
+          <span style={{ width: `${(100 * done) / STAGES.length}%` }} />
+        </div>
+      </div>
       <ol className="steps" aria-label={t("processing.title")}>
         {STAGES.map((stage, i) => (
           <li key={stage} className={state(job?.stages[stage])}>
-            <span className="n">{i + 1}</span>
+            <span className="n">{state(job?.stages[stage]) === "done" ? <Icon name="check" size={16} /> : i + 1}</span>
             <span className="what">{t(`processing.stage.${stage}`)}</span>
             <span className="state">{label(job?.stages[stage])}</span>
           </li>

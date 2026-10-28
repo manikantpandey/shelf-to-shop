@@ -367,7 +367,8 @@
     "done": "हो गया",
     "running": "चल रहा है",
     "failed": "नहीं हुआ",
-    "try_again": "फिर से कोशिश करें"
+    "try_again": "फिर से कोशिश करें",
+    "progress": "{{total}} में से {{done}} काम पूरे"
   },
   "review": {
     "found_one": "{{count}} चीज़ मिली",

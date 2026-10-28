@@ -21,6 +21,8 @@ export function Review() {
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Items whose question the seller just answered: their new price tag lands with a stamp.
+  const [answered, setAnswered] = useState<Set<number>>(new Set());
   const questionsRef = useRef<HTMLElement>(null);
 
   const load = useCallback(async () => {
@@ -51,6 +53,8 @@ export function Review() {
     setError("");
     try {
       await api(`/api/v1/jobs/${jobId}/flags/${flag.id}/resolve`, { method: "POST", json: body });
+      const touched = typeof body.product_idx === "number" ? [body.product_idx] : flag.product_idx ? [flag.product_idx] : flag.candidates;
+      setAnswered((s) => new Set([...s, ...touched]));
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("app.generic_error"));
@@ -109,7 +113,7 @@ export function Review() {
               {p.removed ? (
                 <span className="checktag">{t("review.removed")}</span>
               ) : p.price_inr !== null && !needsCheck.has(p.idx) ? (
-                <PriceTag value={p.price_inr} />
+                <PriceTag value={p.price_inr} stamp={answered.has(p.idx)} />
               ) : (
                 <span className="checktag">
                   <Icon name="alert" size={16} />

@@ -367,7 +367,8 @@
     "done": "Done",
     "running": "Working",
     "failed": "Failed",
-    "try_again": "Try again"
+    "try_again": "Try again",
+    "progress": "{{done}} of {{total}} steps done"
   },
   "review": {
     "found_one": "Found {{count}} item",

@@ -415,6 +415,12 @@ export function Record() {
         ) : <span />}
         <button type="button" className={`shutter${recording ? " on" : ""}`} onClick={recording ? stop : record}
           aria-label={recording ? t("record.stop") : t("record.record")} disabled={phase === "starting"}>
+          {recording ? (
+            // The time left, as a ring that empties around the button.
+            <svg className="ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="47" pathLength={100} style={{ strokeDashoffset: 100 * (1 - left / MAX_SECONDS) }} />
+            </svg>
+          ) : null}
           <span />
         </button>
         {recording ? <span /> : gallery}
