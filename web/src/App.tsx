@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { Home } from "./screens/Home";
 import { Items } from "./screens/Items";
+import { Landing } from "./screens/Landing";
 import { More } from "./screens/More";
 import { Orders } from "./screens/Orders";
 import { Processing } from "./screens/Processing";
@@ -54,6 +55,7 @@ export function App() {
     <BrowserRouter>
       <SessionProvider>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/s/:slug" element={<PublicShop />} />
@@ -62,7 +64,7 @@ export function App() {
             <Route key={path} path={path} element={<Guard>{element}</Guard>} />
           ))}
           <Route path="/catalog" element={<Navigate to="/home" replace />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SessionProvider>
     </BrowserRouter>

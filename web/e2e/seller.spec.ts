@@ -6,7 +6,12 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLIP = path.resolve(HERE, ".fixtures/clip.mp4");
 
 test("seller records, fixes prices, publishes, edits an item; buyer sends a basket order; seller packs it", async ({ page }) => {
+  // The front door shows the demo and the eval figures, then leads to sign in.
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Your shop's catalog from one video" })).toBeVisible();
+  await page.getByRole("button", { name: /^3 Share$/ }).click();
+  await expect(page.getByText("Customers open your shop from WhatsApp, fill a basket and send you the order.")).toBeVisible();
+  await page.getByRole("main").getByRole("link", { name: "Start your own shop" }).click();
   await expect(page).toHaveURL(/\/signin$/);
   // A fresh shop each run, so reruns against the same server never meet an earlier run's shop.
   const shopName = `Sharma Sarees ${Date.now().toString(36)}`;

@@ -23,6 +23,9 @@ for (const [size, viewport] of Object.entries(SIZES)) {
   };
   const shot = shotOf(page);
 
+  await page.goto(`${WEB}/`);
+  await page.waitForTimeout(3500); // the demo's first step has played
+  await shot("landing");
   await page.goto(`${WEB}/signin`);
   await shot("signin");
   await page.getByRole("button", { name: "Try the sample shop" }).click();

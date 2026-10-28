@@ -35,6 +35,12 @@ const PATHS: Record<string, string> = {
   basket: "M3 9h18l-2 11H5zM8 9l4-6 4 6",
   print: "M7 9V3h10v6M7 18H4v-8h16v8h-3M7 14h10v7H7z",
   check2: "M4 12.5 9.5 18 20 6",
+  play: "M7 4.5v15l12.5-7.5z",
+  pause: "M8 5v14M16 5v14",
+  replay: "M4 4v5h5M4.6 15a8 8 0 1 0 1.9-8.3L4 9",
+  lang: "M3 5h10M8 3v2M5 5c.5 3.5 3 6.5 6.5 8M11 5c-.5 3.5-3 6.5-6.5 8M13 21l4-9 4 9M14.3 18h5.4",
+  phone: "M7 2h10v20H7zM11 18h2",
+  shield: "M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6zM8.5 12l2.5 2.5 4.5-5",
 };
 
 export type IconName = keyof typeof PATHS;

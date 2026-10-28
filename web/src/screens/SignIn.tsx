@@ -7,11 +7,11 @@ import { Signboard } from "../components/Signboard";
 import { useSession } from "../session";
 import { LanguageButton } from "../Shell";
 
-export function SignIn() {
+/** Demo sign-in: a private copy of the sample shop, or a new empty shop (hackathon only). */
+export function useStartShop() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { refresh } = useSession();
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<"" | "sample" | "own">("");
 
@@ -34,6 +34,13 @@ export function SignIn() {
       setBusy("");
     }
   };
+  return { signIn, busy, error };
+}
+
+export function SignIn() {
+  const { t } = useTranslation();
+  const [name, setName] = useState("");
+  const { signIn, busy, error } = useStartShop();
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

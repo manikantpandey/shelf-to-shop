@@ -36,6 +36,83 @@
     "start": "Start",
     "no_sample": "The sample shop is not ready yet. Start your own shop instead."
   },
+  "landing": {
+    "title": "Your shop's catalog from one video",
+    "lead": "Walk past your shelf and say each price. Customers get your shop page and order on WhatsApp.",
+    "own": "Start your own shop",
+    "note": "Hindi or English. Free to try in this demo.",
+    "demo_label": "How one video becomes a shop",
+    "play": "Play",
+    "pause": "Pause",
+    "replay": "Play again",
+    "step": {
+      "record": "Record",
+      "check": "Check",
+      "share": "Share"
+    },
+    "step_text": {
+      "record": "Walk past your shelf and say each price, in Hindi or English.",
+      "check": "Each item comes out with its price and a clean photo. You check what it was not sure of.",
+      "share": "Customers open your shop from WhatsApp, fill a basket and send you the order."
+    },
+    "demo": {
+      "said": "humare paas Punjabi tadka hai, to ye bhi same pricing hai",
+      "heard": "heard at {{time}}",
+      "nutcracker": "Nut Cracker",
+      "peanuts": "Salted Peanuts",
+      "tadka": "Punjabi Tadka",
+      "evidence": "You said “same pricing”: ₹4, like the item before. The pack says ₹5, so it shows as MRP.",
+      "shop_name": "Sharma General Store",
+      "order_head": "New order for {{shop}}",
+      "order_line": "1 × {{item}} {{price}}",
+      "order_total": "Total {{total}}"
+    },
+    "get_title": "What one video gives you",
+    "get_lead": "No typing and no photo shoot. Everything a small shop needs to sell online.",
+    "feed_note": "Upload the catalog file to Meta Commerce Manager once. Your items then show in your WhatsApp catalog and can be tagged in Instagram posts.",
+    "r": {
+      "from": "From 1 video of 24 seconds",
+      "page": "Shop page with WhatsApp orders",
+      "feed": "Meta catalog file for Instagram and WhatsApp",
+      "photos": "Clean product photos",
+      "orders": "Order book with daily sales",
+      "poster": "QR poster for your counter",
+      "typing": "Typing",
+      "none": "None",
+      "time": "Your time",
+      "minutes": "About 2 minutes"
+    },
+    "proof_title": "When it is not sure, it asks",
+    "proof_lead": "We tested it on {{videos}} labelled videos with {{items}} items; {{real}} of the videos are from a real kirana shop.",
+    "fig": {
+      "found": "{{found}} of {{items}}",
+      "found_label": "items found",
+      "wrong_label": "wrong prices published without asking you",
+      "asked_label": "prices it asked about instead of guessing",
+      "minutes": "{{minutes}} min",
+      "minutes_label": "of typing saved"
+    },
+    "proof_body": "Nothing goes live until you tap Publish. Every price shows where it came from: the words you said and the moment in the video.",
+    "proof_link": "See the test results",
+    "made_title": "Made for the counter",
+    "made": {
+      "lang": "Hindi and English",
+      "lang_text": "Every screen, and every order message your customers send, in either language.",
+      "phone": "Built for budget phones",
+      "phone_text": "Big buttons and strong contrast for bright shops and small screens.",
+      "privacy": "Your videos are deleted",
+      "privacy_text": "Raw videos are deleted after 7 days. Download or delete all your data any time."
+    },
+    "footer_cta": "Put your shop on WhatsApp today.",
+    "footer_nav": "More about Shelf-to-Shop",
+    "use": "Use it",
+    "open_source": "Open source",
+    "source": "Source code",
+    "tests": "Test results",
+    "privacy": "Privacy",
+    "security": "Security",
+    "built": "Built during the Meta AI hackathon, Oct 27 to Nov 4, 2026. Apache-2.0 licence."
+  },
   "setup": {
     "title": "Your shop",
     "notice_title": "What we keep",
