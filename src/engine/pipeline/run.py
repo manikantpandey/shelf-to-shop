@@ -217,13 +217,13 @@ class Pipeline:
         # Match with colours read from each product's photo, not the detector's text.
         photo_colours = {e.product_idx: e.colour for e in enriched.items}
         matched = await self._stage(
-            "match", 2,
+            "match", 3,
             {"detect": self.hashes["detect"], "transcribe": self.hashes["transcribe"],
              "enrich": self.hashes["enrich"], "parser": PARSER_VERSION, "tags": TAG_PARSER_VERSION},
             MatchOut, lambda: self._match(products, transcript, photo_colours),
         )  # fmt: skip
         verified = await self._stage(
-            "verify", 1, {"match": self.hashes["match"], "segment": self.hashes["segment"]},
+            "verify", 2, {"match": self.hashes["match"], "segment": self.hashes["segment"]},
             VerifyOut, lambda: self._verify(products, matched, segmented.cutouts),
         )  # fmt: skip
         backgrounds = await self._stage(

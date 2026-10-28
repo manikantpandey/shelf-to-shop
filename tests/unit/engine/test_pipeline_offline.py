@@ -95,7 +95,9 @@ async def test_pipeline_end_to_end_offline(clip: Path, tmp_path: Path) -> None:
     prices = {d.product_idx: d.price_inr for d in result.decisions}
     assert prices == {1: 1200, 2: 850, 3: None}
     kinds = {(f.kind, f.product_idx) for f in result.flags}
-    assert ("price_conflict", 2) in kinds  # tag 900 vs spoken 850
+    # Tag 900, spoken 850: sold below the printed price, so the tag is kept as the MRP.
+    assert ("price_conflict", 2) not in kinds
+    assert {d.product_idx: d.mrp_inr for d in result.decisions}[2] == 900
     assert ("missing_price", 3) in kinds
 
     shop = ShopInfo(

@@ -10,6 +10,7 @@ from engine.pipeline.match import match_prices
 from engine.pipeline.schemas import (
     Cutout,
     DetectedProduct,
+    PriceDecision,
     TimedChunk,
     TimedMention,
     Transcript,
@@ -206,3 +207,70 @@ def test_context_crosses_turns_when_phrases_are_close() -> None:
     prods = [_plain(2, 4.6, 11.0, "red"), _plain(3, 11.1, 15.5, "green")]
     result = match_prices(prods, tr)
     assert {d.product_idx: d.price_inr for d in result.decisions} == {2: None, 3: 850}
+
+
+def _tagged(tag: int, text: str | None = None) -> DetectedProduct:
+    return _plain(1, 0, 5).model_copy(
+        update={"tag_price_inr": tag, "tag_text": text or f"₹{tag}/-"}
+    )
+
+
+def test_saying_less_than_the_printed_price_is_a_discount_off_mrp() -> None:
+    # Real clip A: packs printed "₹5/- ONLY", the seller says "chaar rupaye".
+    result = match_prices([_tagged(5)], _single_mention(2.0, 4))
+    [d] = result.decisions
+    assert (d.price_inr, d.mrp_inr) == (4, 5)
+    assert result.flags == []
+
+
+def test_saying_more_than_the_printed_price_is_asked() -> None:
+    result = match_prices([_tagged(1100)], _single_mention(2.0, 1200))
+    [d] = result.decisions
+    assert d.price_inr == 1200 and d.mrp_inr is None
+    assert [f.question_key for f in result.flags] == ["flag.price_conflict.tag"]
+
+
+def test_far_below_the_printed_price_is_asked() -> None:
+    # "barah sau" heard as 200 against a 1200 tag must not go out as a big discount.
+    result = match_prices([_tagged(1200)], _single_mention(2.0, 200))
+    assert [f.question_key for f in result.flags] == ["flag.price_conflict.tag"]
+    assert result.decisions[0].mrp_inr is None
+
+
+def test_printed_mrp_on_a_sale_sign_is_kept() -> None:
+    result = match_prices([_tagged(199, "MRP 250 NOW 199")], _single_mention(2.0, 199))
+    [d] = result.decisions
+    assert (d.price_inr, d.mrp_inr) == (199, 250)
+    assert result.flags == []
+
+
+def test_same_price_for_items_side_by_side_needs_no_question() -> None:
+    # "same price, chaar rupaye" with two packs on screen; the video pairs both with ₹4.
+    prods = [
+        _plain(1, 0, 5).model_copy(update={"spark_price_inr": 4}),
+        _plain(2, 4, 9).model_copy(update={"spark_price_inr": 4}),
+    ]
+    result = match_prices(prods, _single_mention(4.5, 4))
+    assert {d.product_idx: d.price_inr for d in result.decisions} == {1: 4, 2: 4}
+    assert [f.kind for f in result.flags] == []
+
+
+def test_ambiguity_stays_when_the_items_differ_in_price() -> None:
+    prods = [_plain(1, 0, 5), _plain(2, 4, 9).model_copy(update={"tag_price_inr": 6})]
+    result = match_prices(prods, _single_mention(4.5, 4))
+    assert {d.product_idx: d.price_inr for d in result.decisions} == {1: None, 2: 6}
+    assert "ambiguous_price" in [f.kind for f in result.flags]
+
+
+def _priced(idx: int, price: int, confidence: float) -> PriceDecision:
+    return PriceDecision(product_idx=idx, price_inr=price, source="spoken", confidence=confidence)
+
+
+def test_a_far_off_price_is_asked_unless_audio_and_video_agree() -> None:
+    # Real clip B: ₹10 sachets and bread, and a ₹100 toffee jar heard the same by both models.
+    prods = [_plain(i, i * 6, i * 6 + 5, c) for i, c in enumerate(["red", "blue", "green", "pink"])]
+    cheap = [_priced(i, p, 0.95) for i, p in enumerate([10, 8, 12])]
+    agreed = verify(prods, [*cheap, _priced(3, 100, 0.95)], [], [])
+    assert "implausible_price" not in {f.kind for f in agreed}
+    heard_once = verify(prods, [*cheap, _priced(3, 100, 0.75)], [], [])
+    assert ("implausible_price", 3) in {(f.kind, f.product_idx) for f in heard_once}

@@ -21,6 +21,7 @@ from engine.pipeline.schemas import (
     TimedMention,
     Transcript,
 )
+from engine.prices.tags import tag_mrp
 
 LEAD_S = 4.0  # a price can be said this long before its item appears
 LAG_S = 4.0  # ... or this long after the camera has moved on
@@ -28,6 +29,7 @@ COLOUR_WEIGHT = 0.6
 DIRECTION_WEIGHT = 0.3
 VISION_WEIGHT = 1.0
 MARGIN = 0.15
+MIN_SHARE_OF_PRINTED = 0.5  # said below half the printed price: more likely misheard
 
 # "agla wala" (the next one) / "peeche wala" (the one behind): which way along the shelf.
 _NEXT = re.compile(r"(?i)\b(agla|agli|agle|next)\b|अगला|अगली|अगले")
@@ -131,6 +133,18 @@ def match_prices(products: list[DetectedProduct], transcript: Transcript) -> Mat
         heard[best_idx].append((best_score, mention))
 
     decisions = [_decide(p, sorted(heard[p.idx], key=lambda x: -x[0]), flags) for p in products]
+    # "Same price" said with two items on screen needs no question when every item it could
+    # belong to ended up at that price anyway (real clip A: two ₹4 packs side by side).
+    decided = {d.product_idx: d.price_inr for d in decisions}
+    flags = [
+        f
+        for f in flags
+        if not (
+            f.kind == "ambiguous_price"
+            and f.candidates
+            and all(decided.get(c) == f.options[0] for c in f.candidates)
+        )
+    ]
     return MatchResult(decisions=decisions, flags=flags, unplaced=unplaced)
 
 
@@ -180,12 +194,20 @@ def _decide(
     else:
         price, source, confidence = None, "none", 0.0
 
+    printed = tag_mrp(product.tag_text)
+    mrp = printed if printed is not None and price is not None and printed > price else None
     tag = product.tag_price_inr
     if tag is not None and price is not None and tag != price:
-        flags.append(_conflict(product.idx, "tag", [price, tag]))
+        if source != "tag" and tag * MIN_SHARE_OF_PRINTED <= price < tag:
+            # A printed price is the most an item sells for (the MRP on packed goods); saying
+            # less is an ordinary discount, so the tag becomes the MRP instead of a question.
+            mrp = max(mrp or 0, tag)
+        else:
+            flags.append(_conflict(product.idx, "tag", [price, tag]))
     return PriceDecision(
         product_idx=product.idx,
         price_inr=price,
+        mrp_inr=mrp,
         source=source,  # type: ignore[arg-type]
         confidence=confidence,
         evidence=evidence,

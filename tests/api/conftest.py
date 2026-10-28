@@ -27,7 +27,8 @@ LABELS: dict[str, Any] = {
          "tag_price_inr": None},
         {"n": 2, "what": "red silk saree", "appears_s": [2.5, 6.0], "spoken_price_inr": 850,
          "spoken_at_s": 4.0, "spoken_end_s": 5.0, "spoken_words": "laal wala saadhe aath sau",
-         "tag_price_inr": 900},
+         # Said above the printed price: a real conflict the seller must settle.
+         "tag_price_inr": 800},
         {"n": 3, "what": "pink chiffon saree", "appears_s": [5.5, 8.0], "spoken_price_inr": None,
          "spoken_at_s": None, "spoken_end_s": None, "spoken_words": "aur ye gulabi wala",
          "tag_price_inr": None},

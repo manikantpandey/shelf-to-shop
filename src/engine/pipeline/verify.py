@@ -9,6 +9,10 @@ from engine.pipeline.schemas import Cutout, DetectedProduct, Flag, PriceDecision
 
 OUTLIER_FACTOR = 5.0  # a price 5x above or below the job's median gets a second look
 ABSOLUTE_MAX_INR = 5_00_000
+# Heard in the audio and paired by the video model alike (match.py gives such prices 0.95). A
+# kirana sells ₹5 sachets next to a ₹100 jar, so an agreed price is not questioned for being far
+# from the rest.
+AGREED_CONFIDENCE = 0.95
 MIN_MASK_CONFIDENCE = 0.7
 MIN_MASK_COVERAGE = 0.02
 
@@ -39,9 +43,8 @@ def verify(
         p = d.price_inr
         if p is None:
             continue
-        odd = p > ABSOLUTE_MAX_INR or (
-            mid is not None and (p > mid * OUTLIER_FACTOR or p < mid / OUTLIER_FACTOR)
-        )
+        far = mid is not None and (p > mid * OUTLIER_FACTOR or p < mid / OUTLIER_FACTOR)
+        odd = p > ABSOLUTE_MAX_INR or (far and d.confidence < AGREED_CONFIDENCE)
         if odd:
             flags.append(
                 Flag(

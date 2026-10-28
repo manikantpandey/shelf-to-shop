@@ -72,6 +72,8 @@ class Evidence(BaseModel):
 class PriceDecision(BaseModel):
     product_idx: int
     price_inr: int | None
+    # The printed price when the item sells below it (MRP on packed goods).
+    mrp_inr: int | None = None
     source: Literal["spoken", "vision_pairing", "tag", "seller", "none"]
     confidence: float
     evidence: list[Evidence] = Field(default_factory=list)

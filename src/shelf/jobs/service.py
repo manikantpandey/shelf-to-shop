@@ -202,6 +202,7 @@ def _save_review(db: Session, job: Job, result: RunResult, storage: LocalStorage
                 description_en=e.description_en if e else "",
                 description_hi=e.description_hi if e else "",
                 price_inr=d.price_inr if d else None,
+                mrp_inr=d.mrp_inr if d else None,
                 price_source=d.source if d else "none",
                 confidence=d.confidence if d else 0.0,
                 evidence=[ev.model_dump(mode="json") for ev in d.evidence] if d else [],
