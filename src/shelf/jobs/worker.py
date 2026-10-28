@@ -84,6 +84,7 @@ def main() -> None:
     from pathlib import Path
 
     from shelf.jobs.service import PIPELINE_TASK, run_pipeline_job
+    from shelf.privacy.retention import Sweeper
     from shelf.storage import LocalStorage
 
     settings = get_settings()
@@ -99,10 +100,14 @@ def main() -> None:
         },
         lease_s=900,  # a pipeline run takes a few minutes
     )
+    # Deletes videos past each shop's retention period, abandoned uploads and old order details.
+    sweeper = Sweeper(factory, storage)
+    sweeper.start()
     signal.signal(signal.SIGINT, worker.stop)
     signal.signal(signal.SIGTERM, worker.stop)
     log.info("worker_started", worker_id=worker.worker_id)
     worker.run_forever()
+    sweeper.stop()
 
 
 if __name__ == "__main__":

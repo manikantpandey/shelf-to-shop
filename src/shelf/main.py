@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shelf.api.v1 import health, insights, items, public, seller, shop, uploads
+from shelf.api.v1 import health, insights, items, privacy, public, seller, shop, uploads
 from shelf.catalog.openfoodfacts import OpenFoodFacts
 from shelf.config import Settings, get_settings
 from shelf.core.errors import install_error_handlers
@@ -23,6 +23,7 @@ from shelf.db.session import make_engine, make_session_factory
 from shelf.jobs.service import PIPELINE_TASK, run_pipeline_job
 from shelf.jobs.worker import Handler, Worker
 from shelf.plugins import load_integration
+from shelf.privacy.retention import Sweeper
 from shelf.storage import LocalStorage
 from shelf.version import VERSION
 
@@ -37,13 +38,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         worker: Worker | None = None
+        sweeper: Sweeper | None = None
         if settings.worker_inline:
             # Dev convenience: process jobs in this process. Production runs `shelf.jobs.worker`.
             worker = Worker(app.state.session_factory, pipeline_handlers(app))
             threading.Thread(target=worker.run_forever, name="inline-worker", daemon=True).start()
+            sweeper = Sweeper(app.state.session_factory, app.state.storage)
+            sweeper.start()
         yield
         if worker is not None:
             worker.stop()
+        if sweeper is not None:
+            sweeper.stop()
         if app.state.openfoodfacts is not None:
             await app.state.openfoodfacts.aclose()
 
@@ -81,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(items.router, prefix=API_PREFIX)
     app.include_router(insights.router, prefix=API_PREFIX)
     app.include_router(shop.router, prefix=API_PREFIX)
+    app.include_router(privacy.router, prefix=API_PREFIX)
     app.include_router(public.router, prefix=API_PREFIX)
 
     plugin = load_integration(app, settings)
