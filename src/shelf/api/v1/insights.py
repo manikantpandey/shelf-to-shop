@@ -10,7 +10,7 @@ import json
 import re
 import uuid
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path, PureWindowsPath
 from typing import Any
@@ -23,20 +23,18 @@ from sqlalchemy.orm import Session
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import SellerDep
 from shelf.catalog.publish import item_id, live_products
-from shelf.core.clock import iso_utc
+from shelf.core.clock import india_today, iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import Catalog, FlagRow, Job, Product, ShopCounter, Upload, Workspace
 from shelf.jobs.service import STAGE_ORDER
 from shelf.storage import LocalStorage
 
 router = APIRouter()
-IST = timezone(timedelta(hours=5, minutes=30))
 DAYS = 7
 
 
 def shop_today() -> date:
-    """Counters roll over at midnight in India, where the shops are."""
-    return datetime.now(IST).date()
+    return india_today()
 
 
 def _storage(request: Request) -> LocalStorage:

@@ -26,7 +26,7 @@ from engine.pipeline.photos import PhotoRejectedError, recut, square_photo
 from engine.prices.inr import format_inr
 from engine.providers.errors import ProviderError
 from engine.runlog import CallContext, JsonlRunLog
-from engine.spend import InMemorySpendLedger, SpendCapExceededError
+from engine.spend import SpendCapExceededError
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.auth.sessions import Seller, SellerDep
 from shelf.catalog.openfoodfacts import (
@@ -50,6 +50,7 @@ from shelf.jobs.service import (
     settle_photo_flags,
     settle_price_flags,
 )
+from shelf.jobs.spend import DbSpendLedger
 from shelf.storage import LocalStorage
 
 router = APIRouter(tags=["items"])
@@ -517,14 +518,21 @@ async def photo_from_moment(
     ctx = CallContext(
         job_id=str(job.id),
         workspace_id=str(seller.workspace.id),
-        ledger=InMemorySpendLedger(settings.engine_config().caps),
+        ledger=DbSpendLedger(request.app.state.session_factory, settings.engine_config().caps),
         runlog=log,
     ).for_stage("recut")
     providers, client = providers_for(settings)
     try:
         jpeg = await recut(ctx, providers.segmenter, frame, body.x, body.y, p.title_en)
     except SpendCapExceededError as exc:
-        raise AppError("spend_cap", "This would go over your spending limit.", status=402) from exc
+        daily = exc.scope != "job"
+        raise AppError(
+            "daily_cap" if daily else "spend_cap",
+            "Today's limit is used up. Try again tomorrow."
+            if daily
+            else "This would go over your spending limit.",
+            status=402,
+        ) from exc
     except ProviderError as exc:
         raise AppError(
             "model_unavailable", "Cutting out is busy. Try again in a minute.", status=503

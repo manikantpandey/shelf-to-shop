@@ -7,7 +7,7 @@ import json
 import shutil
 import uuid
 import zipfile
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select, update
 
 from shelf.config import Settings
-from shelf.db.models import AuditEvent, Job, Order, Product, Upload, Workspace
+from shelf.db.models import AuditEvent, Job, Order, Product, SpendDay, Upload, Workspace
+from shelf.jobs.spend import shop_scope
 from shelf.jobs.worker import Worker
 from shelf.main import create_app, pipeline_handlers
 from shelf.privacy.retention import sweep
@@ -116,8 +117,10 @@ def test_export_has_everything_and_delete_removes_everything(
 
         r = c.post("/api/v1/privacy/delete", json={"confirm": "wrong shop"}, headers=h)
         assert r.status_code == 422 and r.json()["code"] == "confirm_name"
-        with app.state.session_factory() as db:
+        with app.state.session_factory.begin() as db:
             ws_id = db.scalar(select(Workspace.id).where(Workspace.slug == "privacy-shop"))
+            db.add_all([SpendDay(scope=shop_scope(str(ws_id)), day=date(2026, 10, 29), micros=5),
+                        SpendDay(scope="service", day=date(2026, 10, 29), micros=5)])  # fmt: skip
         r = c.post("/api/v1/privacy/delete", json={"confirm": "Privacy Shop"}, headers=h)
         assert r.status_code == 200
         assert c.get("/api/v1/me").status_code == 401
@@ -130,6 +133,7 @@ def test_export_has_everything_and_delete_removes_everything(
                                  .where(model.workspace_id == ws_id if model is not Workspace
                                         else Workspace.id == ws_id))  # fmt: skip
                 assert left == 0, model.__name__
+            assert db.scalars(select(SpendDay.scope)).all() == ["service"]
             audit = db.scalar(select(AuditEvent).where(AuditEvent.action == "privacy.shop_deleted"))
             assert audit is not None and "Privacy" not in json.dumps(audit.meta)
         # The other shop is untouched.

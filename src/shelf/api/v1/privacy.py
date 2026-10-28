@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from starlette.background import BackgroundTask
 
 from shelf.api.deps import SessionDep, SettingsDep
@@ -26,7 +26,18 @@ from shelf.api.v1.shop import profile_out
 from shelf.auth.sessions import CSRF_COOKIE, SESSION_COOKIE, SellerDep
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
-from shelf.db.models import AuditEvent, Catalog, Job, Order, Product, Section, Upload, User
+from shelf.db.models import (
+    AuditEvent,
+    Catalog,
+    Job,
+    Order,
+    Product,
+    Section,
+    SpendDay,
+    Upload,
+    User,
+)
+from shelf.jobs.spend import shop_scope
 from shelf.storage import LocalStorage
 
 router = APIRouter(tags=["privacy"])
@@ -120,6 +131,8 @@ def delete_everything(
     workspace_id = ws.id
     # The user row owns the shop: deleting it removes the shop and every row that belongs to it.
     db.delete(db.get(User, user.id))
+    # Spend totals are keyed by a scope name, not a foreign key, so they go explicitly.
+    db.execute(delete(SpendDay).where(SpendDay.scope == shop_scope(str(workspace_id))))
     db.flush()
     db.add(AuditEvent(workspace_id=workspace_id, actor="seller", action="privacy.shop_deleted"))
     response.delete_cookie(SESSION_COOKIE, path="/")

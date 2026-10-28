@@ -18,11 +18,12 @@ from engine.providers.interfaces import Providers
 from engine.providers.meta import meta_providers
 from engine.providers.meta_client import MetaClient
 from engine.runlog import CallContext, JsonlRunLog, MemoryRunLog, RunLogEntry
-from engine.spend import InMemorySpendLedger, SpendCapExceededError
+from engine.spend import SpendCapExceededError
 from shelf.config import Settings
 from shelf.core.ids import uuid7
 from shelf.db.models import AuditEvent, FlagRow, Job, Product, Task, Upload, Workspace
 from shelf.jobs import queue
+from shelf.jobs.spend import DbSpendLedger
 from shelf.jobs.worker import PermanentTaskError
 from shelf.storage import LocalStorage
 
@@ -94,6 +95,8 @@ def providers_for(settings: Settings) -> tuple[Providers, MetaClient | None]:
 
 FRIENDLY = {
     "spend_cap": "This video would cost more than your limit. Try a shorter video.",
+    "daily_cap": "Your shop has used today's limit for videos. Try again tomorrow.",
+    "service_daily_cap": "Video processing has reached today's limit. Try again tomorrow.",
     "model_unavailable": "Our image and speech service is busy. Try again in a few minutes.",
     "internal": "Something went wrong while making your catalog. Try again.",
 }
@@ -133,7 +136,7 @@ def run_pipeline_job(
     ctx = CallContext(
         job_id=job_id,
         workspace_id=workspace_id,
-        ledger=InMemorySpendLedger(settings.engine_config().caps),
+        ledger=DbSpendLedger(factory, settings.engine_config().caps),
         runlog=log,
     )
     providers, client = providers_for(settings)
@@ -176,7 +179,10 @@ def _describe(exc: Exception) -> tuple[str, str]:
     if isinstance(exc, MediaRejectedError):
         return exc.code, str(exc)
     if isinstance(exc, SpendCapExceededError):
-        return "spend_cap", FRIENDLY["spend_cap"]
+        code = {"workspace daily": "daily_cap", "instance daily": "service_daily_cap"}.get(
+            exc.scope, "spend_cap"
+        )
+        return code, FRIENDLY[code]
     if isinstance(exc, ProviderError):
         return "model_unavailable", FRIENDLY["model_unavailable"]
     return "internal", FRIENDLY["internal"]

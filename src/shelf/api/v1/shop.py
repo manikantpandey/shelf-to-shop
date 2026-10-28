@@ -19,10 +19,10 @@ from sqlalchemy.orm import Session
 from engine.pipeline.photos import PhotoRejectedError, square_photo
 from engine.prices.inr import format_inr
 from shelf.api.deps import SessionDep
-from shelf.api.v1.insights import IST, shop_today
+from shelf.api.v1.insights import shop_today
 from shelf.auth.sessions import Seller, SellerDep
 from shelf.catalog.sections import ensure_sections
-from shelf.core.clock import iso_utc
+from shelf.core.clock import IST, iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import AuditEvent, Order, Product, Section, Workspace
 from shelf.storage import LocalStorage

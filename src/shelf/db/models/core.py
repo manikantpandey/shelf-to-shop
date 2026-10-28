@@ -9,7 +9,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shelf.db.base import Base, IdMixin, TimestampMixin
@@ -216,6 +216,18 @@ class ShopCounter(IdMixin, Base):
     kind: Mapped[str] = mapped_column(String(10))  # view | order
     item_id: Mapped[str] = mapped_column(String(80), default="")  # "" for page views
     count: Mapped[int] = mapped_column(default=0)
+
+
+class SpendDay(IdMixin, Base):
+    """Model spend on one day (India time) for one shop or the whole service, in millionths of a
+    dollar. Shared by every worker, so the daily caps hold across jobs."""
+
+    __tablename__ = "spend_days"
+    __table_args__ = (UniqueConstraint("scope", "day"),)
+
+    scope: Mapped[str] = mapped_column(String(64))  # "shop:<workspace id>" or "service"
+    day: Mapped[date]
+    micros: Mapped[int] = mapped_column(BigInteger, default=0)
 
 
 class AuditEvent(IdMixin, TimestampMixin, Base):

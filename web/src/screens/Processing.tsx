@@ -69,7 +69,11 @@ export function Processing() {
           </li>
         ))}
       </ol>
-      {failed ? <p className="error" role="alert">{job?.error_message}</p> : null}
+      {failed ? (
+        <p className="error" role="alert">
+          {job?.error_code ? t(`job_error.${job.error_code}`, { defaultValue: job.error_message ?? "" }) : job?.error_message}
+        </p>
+      ) : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
     </Shell>
   );
