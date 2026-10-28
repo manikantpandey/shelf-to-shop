@@ -21,6 +21,7 @@ export function Settings() {
   const [status, setStatus] = useState("");
   const [confirm, setConfirm] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [consentStatus, setConsentStatus] = useState("");
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -34,6 +35,16 @@ export function Settings() {
       setStatus(t("settings.saved"));
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : t("app.generic_error"));
+    }
+  };
+
+  const withdrawRecording = async () => {
+    setConsentStatus("");
+    try {
+      const res = await api<{ workspace: Workspace }>("/api/v1/consents/recording", { method: "DELETE" });
+      setMe({ ...me!, workspace: res.workspace });
+    } catch (err) {
+      setConsentStatus(err instanceof ApiError ? err.message : t("app.offline"));
     }
   };
 
@@ -94,6 +105,17 @@ export function Settings() {
           <a className="btn small" href={apiUrl("/api/v1/privacy/export")} download>
             <Icon name="download" size={18} />{t("settings.export")}
           </a>
+          {ws.consent_recording ? (
+            <>
+              <p className="muted small">{t("settings.recording_on")}</p>
+              <button type="button" className="btn small" onClick={() => void withdrawRecording()}>
+                {t("settings.recording_withdraw")}
+              </button>
+            </>
+          ) : (
+            <p className="muted small">{t("settings.recording_off")}</p>
+          )}
+          {consentStatus ? <p className="error" role="alert">{consentStatus}</p> : null}
         </section>
         <div className="row">
           <button type="submit" className="btn primary">{t("settings.save")}</button>

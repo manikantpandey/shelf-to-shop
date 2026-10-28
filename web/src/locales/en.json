@@ -362,7 +362,10 @@
     "delete_title": "Delete my shop",
     "delete_body": "Deletes your shop page, items, photos, videos, orders and settings for good. Download your data first if you want a copy.",
     "delete_type": "Type your shop name ({{name}}) to confirm",
-    "delete": "Delete my shop and all data"
+    "delete": "Delete my shop and all data",
+    "recording_on": "You agreed to the recording notice. You can take that back at any time; the app asks again before your next video.",
+    "recording_withdraw": "Take back recording consent",
+    "recording_off": "Recording consent is off. The app shows the notice again before your next video."
   },
   "shop": {
     "order": "Order on WhatsApp",

@@ -26,8 +26,8 @@ The shop page never shows the seller's email, internal ids, videos, costs or pri
 - Before the first recording: a separate notice that videos are only for making the catalog, are deleted
   after the retention period, and should not show customers or other people.
 - The customer's basket says their name and note go to that shop only, with the order.
-- Recording consent can be withdrawn (the API supports it today; a switch in Settings is planned);
-  recording then stops until the seller agrees again. Deleting the shop removes everything.
+- Recording consent can be withdrawn in Settings ("Take back recording consent"); uploads are refused
+  until the seller agrees to the notice again. Deleting the shop removes everything.
 
 ## Who else processes data
 

@@ -100,6 +100,13 @@ test("seller records, fixes prices, publishes, edits an item; buyer sends a bask
   await page.getByRole("button", { name: /^Packed/ }).click();
   await expect(page.getByText("Order #1")).toBeVisible();
 
+  // Taking back recording consent in Settings brings the notice back before the next video.
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Take back recording consent" }).click();
+  await expect(page.getByText(/^Recording consent is off\./)).toBeVisible();
+  await page.goto("/record");
+  await expect(page.getByRole("heading", { name: "Before you record" })).toBeVisible();
+
   // Each item has its own page: the link the Meta feed and the WhatsApp message point to.
   await page.goto(shopPath);
   await page.locator(".tile .photo").first().click();
