@@ -5,6 +5,7 @@ Every query is scoped to the signed-in seller's workspace; another workspace's i
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import secrets
@@ -17,7 +18,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from engine.export.whatsapp import InvalidWhatsAppNumberError, normalise_number
 from engine.media.probe import (
@@ -210,8 +211,6 @@ async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> d
     dest = storage.path(key)
     dest.parent.mkdir(parents=True, exist_ok=True)
     size = 0
-    import hashlib
-
     digest = hashlib.sha256()
     with dest.open("wb") as fh:
         async for chunk in request.stream():
@@ -224,7 +223,37 @@ async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> d
                 )
             digest.update(chunk)
             fh.write(chunk)
-    with dest.open("rb") as fh:
+    row = Upload(
+        workspace_id=seller.workspace.id,
+        storage_key=key,
+        size_bytes=size,
+        sha256=digest.hexdigest(),
+        container="",
+        duration_s=0.0,
+        received_bytes=size,
+        expected_bytes=size,
+    )
+    db.add(row)
+    db.flush()
+    return check_upload(row, dest)
+
+
+def upload_out(row: Upload) -> dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "status": row.status,
+        "offset": row.received_bytes,
+        "size_bytes": row.expected_bytes or row.size_bytes,
+        "duration_s": round(row.duration_s, 1),
+        # Over this, the seller picks which part to use (POST /jobs with start_s).
+        "max_clip_s": CLIP_S,
+        "needs_clip": row.duration_s > MediaRules().max_duration_s,
+    }
+
+
+def check_upload(row: Upload, path: Path) -> dict[str, Any]:
+    """The whole file is here: make sure it is a video we can use, then mark it ready."""
+    with path.open("rb") as fh:
         container = sniff_container(fh.read(16))
     try:
         if container is None:
@@ -232,28 +261,27 @@ async def upload_video(request: Request, seller: SellerDep, db: SessionDep) -> d
                 "not_a_video", "That file is not a video. Pick an MP4 or WebM."
             )
         # Longer videos are accepted; the seller then picks which minute to use.
-        info = probe(dest, MediaRules(max_duration_s=LONG_UPLOAD_S))
+        info = probe(path, MediaRules(max_duration_s=LONG_UPLOAD_S))
     except MediaRejectedError as exc:
-        dest.unlink(missing_ok=True)
+        path.unlink(missing_ok=True)
+        row.status = "rejected"
+        # Keep the rejection although the request fails: the file is gone, so a phone that
+        # retries must be told to start over rather than carry on.
+        session = object_session(row)
+        if session is not None:
+            session.commit()
         raise AppError(exc.code, str(exc).capitalize() + ".", status=422) from exc
-    row = Upload(
-        workspace_id=seller.workspace.id,
-        storage_key=key,
-        size_bytes=size,
-        sha256=digest.hexdigest(),
-        container=info.container,
-        duration_s=info.duration_s,
-    )
-    db.add(row)
-    db.flush()
-    return {
-        "id": str(row.id),
-        "duration_s": round(info.duration_s, 1),
-        "size_bytes": size,
-        # Over this, the seller picks which part to use (POST /jobs with start_s).
-        "max_clip_s": CLIP_S,
-        "needs_clip": info.duration_s > MediaRules().max_duration_s,
-    }
+    if not row.sha256:
+        digest = hashlib.sha256()
+        with path.open("rb") as fh:
+            for block in iter(lambda: fh.read(1024 * 1024), b""):
+                digest.update(block)
+        row.sha256 = digest.hexdigest()
+    row.status = "ready"
+    row.container = info.container
+    row.duration_s = info.duration_s
+    row.size_bytes = row.received_bytes
+    return upload_out(row)
 
 
 # --- Jobs and review ----------------------------------------------------------------------
@@ -291,6 +319,8 @@ def new_job(body: NewJob, seller: SellerDep, db: SessionDep) -> dict[str, Any]:
     )
     if upload is None:
         raise AppError("not_found", "That video was not found. Upload it again.", status=404)
+    if upload.status != "ready":
+        raise AppError("not_ready", "That video has not finished uploading.", status=409)
     clip: tuple[float, float] | None = None
     if upload.duration_s > MediaRules().max_duration_s:
         if body.start_s is None:

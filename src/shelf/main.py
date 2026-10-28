@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shelf.api.v1 import health, insights, items, public, seller, shop
+from shelf.api.v1 import health, insights, items, public, seller, shop, uploads
 from shelf.catalog.openfoodfacts import OpenFoodFacts
 from shelf.config import Settings, get_settings
 from shelf.core.errors import install_error_handlers
@@ -71,11 +71,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["content-type", "x-csrf-token", "x-request-id"],
+        allow_headers=["content-type", "x-csrf-token", "x-request-id", "upload-offset"],
         max_age=600,
     )
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(uploads.router, prefix=API_PREFIX)
     app.include_router(seller.router, prefix=API_PREFIX)
     app.include_router(items.router, prefix=API_PREFIX)
     app.include_router(insights.router, prefix=API_PREFIX)

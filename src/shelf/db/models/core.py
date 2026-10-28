@@ -72,6 +72,10 @@ class Upload(IdMixin, TimestampMixin, Base):
     container: Mapped[str] = mapped_column(String(16))
     duration_s: Mapped[float]
     deleted_at: Mapped[datetime | None] = mapped_column(default=None)
+    # Resumable uploads arrive in pieces: receiving -> ready (checked) | rejected.
+    status: Mapped[str] = mapped_column(String(10), default="ready")
+    received_bytes: Mapped[int] = mapped_column(default=0)
+    expected_bytes: Mapped[int | None] = mapped_column(default=None)
 
 
 class Job(IdMixin, TimestampMixin, Base):
