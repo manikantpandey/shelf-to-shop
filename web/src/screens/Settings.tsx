@@ -2,7 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { api, ApiError, type Workspace } from "../api";
+import { api, apiUrl, ApiError, type Workspace } from "../api";
+import { Icon } from "../components/Icon";
 import { formatPhone } from "../format";
 import { setLanguage } from "../i18n";
 import { useSession } from "../session";
@@ -18,6 +19,8 @@ export function Settings() {
   const [aiMark, setAiMark] = useState(ws.ai_mark);
   const [days, setDays] = useState(ws.raw_retention_days);
   const [status, setStatus] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,17 @@ export function Settings() {
       setStatus(t("settings.saved"));
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : t("app.generic_error"));
+    }
+  };
+
+  const deleteAll = async () => {
+    setDeleteError("");
+    try {
+      await api("/api/v1/privacy/delete", { method: "POST", json: { confirm } });
+      setMe(null);
+      navigate("/signin");
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : t("app.offline"));
     }
   };
 
@@ -76,13 +90,31 @@ export function Settings() {
             <input id="s-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(Number(e.target.value))} />
             <span className="hint">{t("settings.retention_hint")}</span>
           </div>
+          <p className="muted small">{t("settings.orders_retention")}</p>
+          <a className="btn small" href={apiUrl("/api/v1/privacy/export")} download>
+            <Icon name="download" size={18} />{t("settings.export")}
+          </a>
         </section>
         <div className="row">
           <button type="submit" className="btn primary">{t("settings.save")}</button>
           {status ? <p role="status" className="ok">{status}</p> : null}
         </div>
       </form>
-      <button type="button" className="btn danger" onClick={signOut} style={{ alignSelf: "flex-start" }}>{t("settings.signout")}</button>
+      <button type="button" className="btn" onClick={signOut} style={{ alignSelf: "flex-start" }}>{t("settings.signout")}</button>
+
+      <section className="panel" aria-labelledby="del-h">
+        <h2 id="del-h">{t("settings.delete_title")}</h2>
+        <p className="muted small">{t("settings.delete_body")}</p>
+        <div className="field">
+          <label htmlFor="del-confirm">{t("settings.delete_type", { name: ws.name })}</label>
+          <input id="del-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+        </div>
+        <button type="button" className="btn danger" style={{ alignSelf: "flex-start" }}
+          disabled={confirm.trim().toLowerCase() !== ws.name.trim().toLowerCase()} onClick={() => void deleteAll()}>
+          <Icon name="trash" size={18} />{t("settings.delete")}
+        </button>
+        {deleteError ? <p className="error" role="alert">{deleteError}</p> : null}
+      </section>
     </Shell>
   );
 }

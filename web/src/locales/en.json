@@ -356,7 +356,13 @@
     "retention_hint": "Your items and photos stay. Only the raw videos are deleted.",
     "save": "Save",
     "saved": "Saved",
-    "signout": "Sign out"
+    "signout": "Sign out",
+    "orders_retention": "Customer names and notes on orders are cleared after 90 days; the order totals stay.",
+    "export": "Download all my data",
+    "delete_title": "Delete my shop",
+    "delete_body": "Deletes your shop page, items, photos, videos, orders and settings for good. Download your data first if you want a copy.",
+    "delete_type": "Type your shop name ({{name}}) to confirm",
+    "delete": "Delete my shop and all data"
   },
   "shop": {
     "order": "Order on WhatsApp",
