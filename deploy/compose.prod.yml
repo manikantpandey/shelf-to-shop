@@ -47,6 +47,7 @@ services:
       dockerfile: deploy/Dockerfile.web
       args:
         VITE_API_BASE_URL: https://${SITE_HOST:?set SITE_HOST}
+        VITE_SITE_URL: https://${SITE_HOST:?set SITE_HOST}
     restart: unless-stopped
     environment:
       SITE_HOST: ${SITE_HOST}

@@ -41,6 +41,7 @@ services:
     working_dir: /web
     environment:
       VITE_API_BASE_URL: http://localhost:8000
+      VITE_SITE_URL: http://localhost:5173
     volumes:
       - ../web:/web
       - webmodules:/web/node_modules

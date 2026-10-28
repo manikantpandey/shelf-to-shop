@@ -3,8 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1C3FAA" />
-    <meta name="description" content="Turn a shelf video into a WhatsApp catalog." />
+    <meta name="theme-color" content="#0F4C3A" />
+    <meta name="description" content="Walk past your shelf and say each price. Get a shop page customers order from on WhatsApp, a Meta catalog file and clean photos." />
+    <!-- Link previews in WhatsApp and Instagram. VITE_SITE_URL is set at build time (deploy/Dockerfile.web). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Shelf-to-Shop" />
+    <meta property="og:title" content="Shelf-to-Shop: your shop's catalog from one video" />
+    <meta property="og:description" content="Say each price on video. Customers order on WhatsApp." />
+    <meta property="og:image" content="%VITE_SITE_URL%/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Three snack packs with yellow price tags under the Shelf-to-Shop signboard." />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <title>Shelf-to-Shop</title>
