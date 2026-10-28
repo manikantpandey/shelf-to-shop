@@ -12,6 +12,7 @@ The seller checks every price before anything goes public. If the system is unsu
 question ("Is this ₹4 or ₹5?") instead of guessing.
 
 <p>
+<img src="docs/screenshots/landing-phone.jpg" width="200" alt="The front door: headline, the two ways in, and the demo phone playing a real shelf clip">
 <img src="docs/screenshots/home-phone.jpg" width="200" alt="Home: today's orders, items and the last video">
 <img src="docs/screenshots/review-phone.jpg" width="200" alt="Review: items found in the video with their price tags and questions">
 <img src="docs/screenshots/shop-phone.jpg" width="200" alt="The public shop page a customer opens">
@@ -65,6 +66,7 @@ Checks: `make check` (ruff, mypy strict, import boundaries, pytest), `make web-t
 
 | Screen | What it is for |
 |---|---|
+| Front door | What the app does, a demo phone that plays a real 24-second shelf clip through record, check and share, the eval figures, and the two ways in (the sample shop, or your own) |
 | Record | Rear camera, 60 s limit with a countdown, "Move slowly" and "Say each price", a mic level that says "Speak louder", torch. Or pick a video from the gallery (up to 10 minutes; choose which minute to use). Uploads resume after a dropped connection |
 | Processing | The pipeline's steps as they finish; the seller can close the app |
 | Review | Every item with its photo and price tag; questions only where the system is unsure; each price shows where it came from (the words heard, the time, the tag read) |

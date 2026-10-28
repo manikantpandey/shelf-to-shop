@@ -22,6 +22,53 @@ for engine/shelf/web code.
 
 ---
 
+## Session 11: Oct 29 (front door, link preview, motion that answers a tap)
+
+You asked for the frontend to take ideas from six galleries (Modulify, Motionin, Landdding, 60fps, Footer,
+Recent). What was taken from each and what was left out is in `docs/design-plan.md`, revision 4.
+
+### Done
+- **Front door at `/`** (`web/src/screens/Landing.tsx`): headline, the two ways in (sample shop, own shop), a
+  demo phone that plays the seller's own clip A through Record (the Hinglish words, the focus brackets, "₹4
+  heard at 0:19"), Check (three items, the "same pricing" evidence, MRP ₹5) and Share (shop page, basket,
+  order message). Plays once when on screen; steps and pause/play buttons; still under reduced motion.
+  Then a receipt slip of what one video gives, the eval figures in a ruled row with a link to the report,
+  three "made for the counter" rows, and a board-green footer with the signboard as wide as the screen.
+  Signed-in sellers go to Home; the installed app starts at `/home`. English and Hindi.
+- Assets in `web/public/landing/`: one frame of clip A (consent in its label file: the seller's own shop,
+  filmed by the seller, no customers) and three product photos from the sample shop (with their AI
+  background mark).
+- **Link preview** `web/public/og.png` (1200×630) and Open Graph tags; `VITE_SITE_URL` build arg in the web
+  Dockerfile and compose files (default `https://shop.shankhyaai.com`).
+- Fixed: theme colour, manifest colours and app icon were still revision 1 blue.
+- **Motion that answers a tap** (all off under reduced motion): buttons press in; the tab bar's mark slides
+  to the tapped tab (view transition); on the shop page Add turns into the stepper, the basket bar rises and
+  its count bumps (not for a basket restored on reload); a fixed price lands with a stamp in Review;
+  Processing has a filling bar ("3 of 8 steps done") and drawn ticks; the recorder has a ring that empties
+  over the 60 seconds.
+- Checked at 360×800 and 1440×900 in English and Hindi; fixed on the way: three class-name clashes with
+  older styles (`.heard`, `.app`, `.hero`), stretched demo photos, a wrapped Hindi figure, footer sizing.
+
+### Broken / risks
+- Shop links share the generic preview; a per-shop preview needs a server-rendered page (plan, open
+  question 5).
+- Local dev note: shop photos only load when the API knows its own address (`API_BASE_URL=http://localhost:8000`,
+  now in `.env.example`; add it to your `.env` if you run `make api`).
+- The eval figures on the front door are constants (`EVALS` in `Landing.tsx`); they must change with
+  `evals/report.md`.
+
+### Test results
+- Web: `tsc` clean, vitest **16 passed** (3 new for the front door), Playwright **2 passed** (the journey
+  now starts on the front door), production build clean.
+- No Python changed this session.
+
+### Next 3 tasks
+1. Deploy (runbook 1.1-1.4), then a real Commerce Manager upload of the feed.
+2. Spike 5 on a real Android phone over HTTPS (mimeType, file size for 60 s).
+3. `docs/integration/phoenix.md` as a design doc; the socialpulse code only if everything else is green.
+
+---
+
 ## Session 10: Oct 29 (evals on the labelled clips, fewer needless questions, README, daily caps)
 
 ### Done

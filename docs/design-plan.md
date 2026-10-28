@@ -1,7 +1,87 @@
 # Design plan
 
-Revision 3, Oct 28, 2026 (revision 2 was Oct 27). Scope: the `web/` PWA (seller app and public shop page).
-Tokens live in `web/src/styles/app.css`; if code and this document disagree, fix one of them in the same change.
+Revision 4, Oct 29, 2026 (revision 3 was Oct 28, revision 2 Oct 27). Scope: the `web/` PWA (front door, seller
+app and public shop page). Tokens live in `web/src/styles/app.css`; if code and this document disagree, fix one of
+them in the same change.
+
+## Revision 4: a front door, and motion that answers a tap
+
+The owner asked for the frontend to take ideas from six reference galleries. Until now a visitor to the site's
+address landed on a sign-in form, which says nothing about what the product does; judges, and sellers who tap a
+link someone shared, need that first. What each source gave us, and what we left out:
+
+| Source | What it collects | Taken | Left out, and why |
+|---|---|---|---|
+| Landdding | Real landing pages | The product's own screen next to the headline; one idea per band; proof with real numbers | Logo walls and testimonials (we have neither); big-number cards with gradients (avoid list) |
+| Modulify | Ready-made site sections | An order of sections: hero, what you get, proof, details, footer. No section was copied | The template look of identical cards |
+| Motionin | Interactive hero and showcase sections | One product showcase that plays: the demo phone | Scroll-driven choreography, 3D and cursor effects: too heavy for a 2 GB phone, and motion must answer a tap or show the pipeline |
+| 60fps | Animations from shipping apps | A tab mark that slides to the tapped tab; Add turning into a quantity stepper; a count that bumps; a stamp when a price is fixed; a progress bar that fills; a ring that empties as recording time runs out | Confetti, mascots, idle loops |
+| Footer | Website footers, filterable by "Large type" and "Typographic" | A full-width large-type footer: the app's own signboard at street level | Marquees and animated footers |
+| Recent | Design feed incl. OG images and a receipt component | A 1200×630 link preview from real product photos; the receipt slip for "what you get" | A launch video (follow-up) |
+
+**The front door (`/`)**. Signed-in sellers go straight to Home; the installed app starts at `/home`.
+
+```
+FRONT DOOR (phone)               FRONT DOOR (laptop)
+┌──────────────────────────┐     ┌───────────────────────────────────────────────┐
+│[SHELF-TO-SHOP]     हिंदी │     │[SHELF-TO-SHOP]                         हिंदी │
+│Your shop's catalog       │     │Your shop's catalog          ┌──────────┐      │
+│from one video            │     │from one video               │demo phone│      │
+│Walk past your shelf ...  │     │Walk past your shelf ...     │record,   │      │
+│[ Try the sample shop   ] │     │[Try the sample shop][Start] │check,    │      │
+│[ Start your own shop   ] │     │                             │share     │      │
+│ ┌──────────┐             │     │                        (1)(2)(3)  ▶ caption   │
+│ │demo phone│ (1)(2)(3) ▶ │     ├───────────────────────────────────────────────┤
+│ └──────────┘             │     │What one video gives you       ┌~receipt~┐     │
+├──────────────────────────┤     ├───────────────────────────────────────────────┤
+│What one video gives you  │     │When it is not sure, it asks                   │
+│ ┌~~~~ receipt ~~~~┐      │     │21 of 21 │ 0 │ 3 │ 26 min      (ruled ledger)  │
+│ │Shop page ....  1│      │     ├───────────────────────────────────────────────┤
+│ └~~~~~~~~~~~~~~~~~┘      │     │Made for the counter: three ruled rows         │
+│When it is not sure, asks │     ├───────────────────────────────────────────────┤
+│21 of 21 │ 0 │ 3 │ 26 min │     │board green: closing line, button, links       │
+├──────────────────────────┤     │╔═════════════ SHELF-TO-SHOP ═════════════════╗│
+│board green footer, links │     │╚═════════════════════════════════════════════╝│
+│╔═ SHELF-TO-SHOP ═╗       │     └───────────────────────────────────────────────┘
+└──────────────────────────┘
+```
+
+- **Demo phone**: a working miniature built from the real screens' tokens, not a screenshot. Record shows a frame
+  of the seller's own 24-second clip with the seller's Hinglish words appearing as they are spoken, then the focus
+  brackets lock on the pack and "₹4 heard at 0:19" stamps in. Check shows the three items found, with the
+  evidence line ("you said 'same pricing': ₹4; the pack says ₹5, so it shows as MRP"). Share shows the shop page,
+  two items in the basket and the order message. It plays once when it comes on screen and stops on the shop;
+  the three numbered steps (a true sequence) jump to a step; a button pauses or plays again (WCAG 2.2.2). Under
+  reduced motion it never plays by itself and every element is shown in its final place.
+- **Receipt**: what one video gives, printed like a billing-machine slip: torn edges, dotted leaders, a ruled
+  total ("Typing: none"). Structure from the receipt, no fake shop details.
+- **Proof**: the eval figures from `evals/report.md` in one ruled ledger row, with the honest wording ("3 of the
+  videos are from a real kirana shop") and a link to the full table.
+- **Footer**: board green, the closing line and the one button, the links, then the signboard as wide as the
+  screen. It is the only large type on the page.
+- **Link preview** (`/og.png`, 1200×630): the signboard, the headline and the three tagged products on board
+  green. `index.html` points to it with an absolute address (`VITE_SITE_URL`). Shop pages share this preview
+  for now; a per-shop preview needs a page rendered on the server (open question 5 in the plan).
+- Fixed on the way: the browser theme colour, the manifest colours and the app icon were still revision 1 blue.
+  They are now board green with the marigold tag.
+
+**Motion rules, revision 4**. Still only in answer to a touch or to show the pipeline, all off under
+`prefers-reduced-motion`:
+
+- Buttons, chips and tiles press in slightly (scale 0.97, 120 ms).
+- Tab bar: the mark under the current tab slides to the tapped tab (a view transition on tab taps only; the
+  page itself does not fade).
+- Shop page: Add turns into the quantity stepper; the basket bar rises when the first item goes in; its count
+  bumps on each change. A basket restored on reload does not animate.
+- Review: when a question is answered, the item's new price tag lands with a stamp.
+- Processing: a bar fills as steps finish ("3 of 8 steps done"); a finished step's number becomes a drawn tick.
+- Recorder: a marigold ring around the record button empties as the 60 seconds run out.
+- The landing demo is the one thing that moves without a tap. It shows the pipeline, runs once, and can be paused.
+
+Checked against the avoid list: no gradient washes, glass or neon; no eyebrow labels or "→" buttons; the only
+numbered markers are the demo's three steps and the pipeline (true sequences); no fade-and-slide on scroll (the
+bands below the hero do not move at all); no sparkle icons or "AI magic" copy ("When it is not sure, it asks");
+no emoji. The phone mock and the bubble have the only new shadows, because they stand for objects.
 
 ## Revision 3: running the shop, not just making the catalog
 
