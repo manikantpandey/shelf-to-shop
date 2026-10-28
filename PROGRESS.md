@@ -48,6 +48,9 @@ for engine/shelf/web code.
   reservation is one guarded UPDATE per scope in one transaction (6 parallel workers never overshoot,
   a refused reservation leaves nothing), photo recuts count too, each cap has its own message in English
   and Hindi, and deleting a shop removes its totals. Migration `e1e6716e856a`.
+- **Take back recording consent** in Settings (DPDP; was API-only): uploads are refused until the seller
+  agrees again; the browser journey now checks that Record shows the notice again. Screenshots at
+  360x800 in English and Hindi checked.
 - README: problem with sources, quickstart, screens, architecture and pipeline diagrams, which Meta model
   does what and why, eval table, security summary, limitations, roadmap, hackathon statement.
 
