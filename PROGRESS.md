@@ -22,7 +22,7 @@ for engine/shelf/web code.
 
 ---
 
-## Session 10: Oct 29 (evals on the labelled clips, fewer needless questions, README)
+## Session 10: Oct 29 (evals on the labelled clips, fewer needless questions, README, daily caps)
 
 ### Done
 - **Eval runner** (`evals/run_evals.py`, scoring in `evals/scoring.py`, 7 unit tests): runs each labelled
@@ -43,6 +43,11 @@ for engine/shelf/web code.
   without a question**, seeded traps 5 of 5; 138 s of video in 11.5 min, $0.45. The synthetic clip then
   showed a hole in the new MRP rule (1002 heard, 1200 paired by the video model, tag 1100 became an MRP);
   a price already in question is never read as a discount now. Both runs together cost about $0.95.
+- **Daily spend caps** (brief section 3): each run had its own in-memory ledger, so only the per-job cap
+  held. Totals per shop and for the whole service now live in `spend_days` (India days), each
+  reservation is one guarded UPDATE per scope in one transaction (6 parallel workers never overshoot,
+  a refused reservation leaves nothing), photo recuts count too, each cap has its own message in English
+  and Hindi, and deleting a shop removes its totals. Migration `e1e6716e856a`.
 - README: problem with sources, quickstart, screens, architecture and pipeline diagrams, which Meta model
   does what and why, eval table, security summary, limitations, roadmap, hackathon statement.
 
@@ -55,15 +60,15 @@ for engine/shelf/web code.
   the video model disagreed.
 
 ### Test results
-- `make check`: ruff, mypy strict (90 files), import-linter 2/2, pytest **263 passed** (7 eval-scoring
-  and 8 new matcher tests).
+- `make check`: ruff, mypy strict (91 files), import-linter 2/2, pytest **270 passed** (7 eval-scoring,
+  8 matcher and 7 spend-cap tests).
 - Web: `tsc` clean, vitest **13 passed**, Playwright **2 passed** (the journey's test shop now has a real
   conflict: said above the printed price).
 
 ### Next 3 tasks
 1. Deploy (runbook 1.1-1.4), then a real Commerce Manager upload of the feed.
 2. Spike 5 on a real Android phone over HTTPS (mimeType, file size for 60 s).
-3. Email one-time-code sign-in, or daily spend caps, whichever the demo needs first.
+3. Email one-time-code sign-in (the last "not done" item in security.md that the brief requires).
 
 ---
 
