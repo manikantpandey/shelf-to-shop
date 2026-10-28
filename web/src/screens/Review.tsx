@@ -119,6 +119,9 @@ export function Review() {
             </span>
             <span className="body">
               <span className="name">{title(p)}</span>
+              {!p.removed && p.mrp_inr && p.price_inr !== null && p.mrp_inr > p.price_inr ? (
+                <span className="meta">{t("shop.mrp")} <s>{formatINR(p.mrp_inr)}</s></span>
+              ) : null}
               <span className={p.image_url ? "meta" : "meta warn"}>
                 {p.removed ? t("review.tap_to_put_back") : !p.image_url ? t("review.add_photo") : p.ai_background ? t("review.ai_label") : "\u00a0"}
               </span>

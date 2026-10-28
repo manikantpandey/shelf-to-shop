@@ -370,6 +370,7 @@ def product_out(p: Product, job_id: uuid.UUID) -> dict[str, Any]:
         "description_hi": p.description_hi,
         "price_inr": p.price_inr,
         "price_display": format_inr(p.price_inr * 100) if p.price_inr is not None else None,
+        "mrp_inr": p.mrp_inr,
         "source": p.price_source,
         "confidence": p.confidence,
         "brand": p.brand,

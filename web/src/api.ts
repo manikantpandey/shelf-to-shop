@@ -88,6 +88,7 @@ export type ReviewProduct = {
   title_hi: string;
   price_inr: number | null;
   price_display: string | null;
+  mrp_inr: number | null;
   source: string;
   confidence: number;
   brand: string | null;
