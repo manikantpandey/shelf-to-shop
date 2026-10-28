@@ -35,7 +35,7 @@ listed under "Not done yet" rather than left out.
 | Logging (V16) | Structured JSON logs; a scrubber removes keys, tokens, emails and phone numbers; audit events for sign-in, sign-out, consent, publishing, photo replacement, bulk edits, profile changes, data export and shop deletion (no personal data in them) | `core/logging.py`, `audit_events` table |
 | Configuration | Production refuses demo sign-in, fake AI providers, a non-https site address and a weak secret | `shelf/config.py` |
 | AI inputs (prompt injection) | Text, audio and images from videos are passed as data inside clearly marked untrusted blocks; every answer must match a strict JSON schema (one repair retry, then it fails); the models have no tools: they cannot publish, pay or message anyone; publishing always needs the seller's tap | `engine/agents/structured.py` |
-| AI provider | Contributor model variants (which may train on content) are refused by configuration; requests use `store: false`; uploaded files expire after an hour and are deleted after use; spend is capped per job | `engine/config.py`, `providers/meta_client.py`, `engine/spend.py` |
+| AI provider | Contributor model variants (which may train on content) are refused by configuration; requests use `store: false`; uploaded files expire after an hour and are deleted after use; spend is capped per job, per shop per day and for the whole service per day (totals shared in the database, checked with one guarded update) | `engine/config.py`, `providers/meta_client.py`, `engine/spend.py`, `shelf/jobs/spend.py` |
 | Secrets (V13) | Only from environment variables (AWS Parameter Store in production); `.env` is git-ignored; gitleaks runs before every commit and over the full history in CI, with extra rules for Meta and our own keys | `.pre-commit-config.yaml`, `.gitleaks.toml`, CI |
 | Supply chain (V15) | `uv.lock` and `package-lock.json` pinned; GitHub Actions pinned by commit; Dependabot for Python, npm and Actions; CI fails on pip-audit findings, `npm audit` high-severity findings and any Semgrep finding (python, typescript, react, secrets rule packs) | `.github/workflows/ci.yml`, `.github/dependabot.yml` |
 | Infrastructure | One EC2 machine: only ports 80 and 443 open, no SSH (Session Manager), IMDSv2 required, encrypted disk, a role that can read only `/shelf-to-shop/*` parameters | `deploy/cloudformation.yml` |
@@ -46,7 +46,6 @@ listed under "Not done yet" rather than left out.
   token rotation and listing or ending other sessions are planned after the hackathon.
 - Rate limits live in memory in one API process: right for the single-server deployment, not for
   several servers (would move to Redis or Postgres).
-- Daily spend caps across jobs are not enforced yet (the per-job cap is).
 - Page-view counters can be inflated by a script within the rate limit; they are totals only.
 - Uploaded files are not virus-scanned; videos and photos are always decoded and re-encoded before use.
 - Photos are on the server's disk; moving published photos to Cloudflare R2 with signed URLs is planned.

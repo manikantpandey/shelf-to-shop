@@ -80,10 +80,14 @@ in error responses, so a seller's error message can be traced to its log lines.
 
 Spend: each job's model cost is stored on the job (`jobs.cost_usd`) and every model call is in the job's
 `runlog.jsonl`. The per-job cap (`SPEND_CAP_PER_JOB_USD`, default $0.50) stops a job before the call that
-would cross it. The daily caps (`SPEND_CAP_PER_WORKSPACE_DAY_USD` $3, `SPEND_CAP_PER_INSTANCE_DAY_USD` $25)
-are not enforced across jobs yet (they need the database spend ledger); until then, watch daily usage in
-the Meta dashboard, or in the Postgres shell:
-`select date(created_at), sum(cast(cost_usd as numeric)) from jobs group by 1 order by 1;`
+would cross it. The daily caps per shop (`SPEND_CAP_PER_WORKSPACE_DAY_USD`, default $3) and for the whole
+service (`SPEND_CAP_PER_INSTANCE_DAY_USD`, default $25) hold across jobs and workers: totals live in the
+`spend_days` table and roll over at midnight India time. A job that hits one stops with "Try again
+tomorrow"; its finished stages are kept, so the retry costs only what was left. Today's totals, in the
+Postgres shell (amounts in millionths of a dollar):
+`select scope, day, micros / 1e6 as usd from spend_days where day = current_date order by micros desc;`
+To change a cap, create or update `/shelf-to-shop/SPEND_CAP_PER_WORKSPACE_DAY_USD` (or the other two)
+in Parameter Store as a String and rerun bootstrap ([section 3](#3-rotating-keys)); locally, set it in `.env`.
 
 ## 3. Rotating keys
 

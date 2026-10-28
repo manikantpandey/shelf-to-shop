@@ -195,7 +195,6 @@ Details and the honest gaps: [docs/security.md](docs/security.md) (OWASP ASVS 5.
 - **Sign-in is a demo sign-in** (flag-gated, refused in production config). Email one-time codes and
   refresh-token rotation are designed but not built.
 - Photos live on the server's disk; moving published photos to R2 with signed URLs is not done.
-- The per-job spend cap is enforced; the daily caps across jobs are not yet.
 - Muse Spark Open on Baseten for the text-only step is configured but not wired up; all steps use the Meta
   Model API.
 - The feed follows Meta's catalog spec and is validated by tests, but has not yet been through a real
@@ -210,7 +209,7 @@ Details and the honest gaps: [docs/security.md](docs/security.md) (OWASP ASVS 5.
 1. Email one-time-code sign-in, then a Capacitor Android shell around the same web app.
 2. Commerce Manager upload of a real feed; scheduled feed URL instead of a one-time CSV.
 3. More clips from real shops (textiles, footwear, handicrafts) and a larger eval set.
-4. Daily spend caps, R2 storage for published photos, C2PA content credentials once a trusted signing
+4. R2 storage for published photos, C2PA content credentials once a trusted signing
    certificate is practical.
 5. SocialPulse mode: versioned tool API with manifest, API keys with scopes, HMAC request signing, signed
    webhooks, and a review link so the seller still approves every publish.
