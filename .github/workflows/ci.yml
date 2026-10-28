@@ -56,6 +56,22 @@ jobs:
       - name: Tests
         run: uv run pytest
 
+  audit:
+    name: dependency audit and static analysis (pip-audit, Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - name: pip-audit (fails on any known vulnerability in the locked dependencies)
+        run: |
+          uv export --frozen --no-hashes --no-dev --no-emit-project > requirements.txt
+          uvx pip-audit==2.10.1 -r requirements.txt --no-deps --disable-pip --progress-spinner off
+      - name: Semgrep (fails on any finding)
+        run: >
+          uvx semgrep==1.182.1 scan --metrics=off --error
+          --config p/python --config p/typescript --config p/react --config p/secrets
+          src web/src
+
   web:
     name: web (typecheck, unit tests, build, audit)
     runs-on: ubuntu-latest
