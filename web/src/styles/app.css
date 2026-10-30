@@ -589,7 +589,7 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
 .rec-time { position: absolute; top: 1.4em; left: 1.1em; display: inline-flex; align-items: center; gap: 0.45em; padding: 0.15em 0.75em;
   border-radius: 999px; background: rgb(0 0 0 / 0.6); font-weight: 700; font-variant-numeric: tabular-nums; }
 .rec-time::before { content: ""; width: 0.6em; height: 0.6em; border-radius: 50%; background: #ff4d3d; animation: blink 1s steps(2) 5; }
-.focus { position: absolute; left: 22%; top: 19%; width: 66%; height: 51%; --c: var(--marigold);
+.focus { position: absolute; left: 25%; top: 41%; width: 50%; height: 31%; --c: var(--marigold);
   background:
     linear-gradient(var(--c) 0 0) left top / 1.6em 3px, linear-gradient(var(--c) 0 0) left top / 3px 1.6em,
     linear-gradient(var(--c) 0 0) right top / 1.6em 3px, linear-gradient(var(--c) 0 0) right top / 3px 1.6em,

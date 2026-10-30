@@ -29,14 +29,15 @@ Recent). What was taken from each and what was left out is in `docs/design-plan.
 
 ### Done
 - **Front door at `/`** (`web/src/screens/Landing.tsx`): headline, the two ways in (sample shop, own shop), a
-  demo phone that plays the seller's own clip A through Record (the Hinglish words, the focus brackets, "₹4
+  demo phone that walks clip A's items through Record (the Hinglish words, the focus brackets, "₹4
   heard at 0:19"), Check (three items, the "same pricing" evidence, MRP ₹5) and Share (shop page, basket,
   order message). Plays once when on screen; steps and pause/play buttons; still under reduced motion.
   Then a receipt slip of what one video gives, the eval figures in a ruled row with a link to the report,
   three "made for the counter" rows, and a board-green footer with the signboard as wide as the screen.
   Signed-in sellers go to Home; the installed app starts at `/home`. English and Hindi.
-- Assets in `web/public/landing/`: one frame of clip A (consent in its label file: the seller's own shop,
-  filmed by the seller, no customers) and three product photos from the sample shop (with their AI
+- Assets in `web/public/landing/`: a camera view of hanging packs composed only from the sample shop's
+  cut-outs (Salted Peanuts and Punjabi Tadka; you asked for no frame of your hand or shop, so the frame was
+  replaced in the unpushed commits too) and three product photos from the sample shop (with their AI
   background mark).
 - **Link preview** `web/public/og.png` (1200×630) and Open Graph tags; `VITE_SITE_URL` build arg in the web
   Dockerfile and compose files (default `https://shop.shankhyaai.com`).

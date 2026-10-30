@@ -46,9 +46,10 @@ FRONT DOOR (phone)               FRONT DOOR (laptop)
 └──────────────────────────┘
 ```
 
-- **Demo phone**: a working miniature built from the real screens' tokens, not a screenshot. Record shows a frame
-  of the seller's own 24-second clip with the seller's Hinglish words appearing as they are spoken, then the focus
-  brackets lock on the pack and "₹4 heard at 0:19" stamps in. Check shows the three items found, with the
+- **Demo phone**: a working miniature built from the real screens' tokens, not a screenshot. Record shows a camera
+  view of hanging strips of packs, built only from the sample shop's cut-outs (no hand, no shop interior, at the
+  owner's request), with the seller's Hinglish words appearing as they are spoken; then the focus brackets lock
+  on the pack and "₹4 heard at 0:19" stamps in. Check shows the three items found, with the
   evidence line ("you said 'same pricing': ₹4; the pack says ₹5, so it shows as MRP"). Share shows the shop page,
   two items in the basket and the order message. It plays once when it comes on screen and stops on the shop;
   the three numbered steps (a true sequence) jump to a step; a button pauses or plays again (WCAG 2.2.2). Under
