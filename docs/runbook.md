@@ -58,6 +58,11 @@ shelf videos. Build it once on the server, from videos you own:
    sudo docker compose -f compose.prod.yml exec api python scripts/seed_demo.py      --name "Sharma General Store" --whatsapp "YOUR NUMBER" --publish 2      --hours "8 am to 10 pm" --delivery both --delivery-note "Free home delivery within 2 km"      --min-order 100 --about "Your neighbourhood kirana for snacks, cold drinks and daily needs."      --notice "Diwali offer: Haldiram's packs at ₹4" /tmp/a.mp4 /tmp/b.mp4 /tmp/c.mp4
    ```
 3. Delete the clips from S3 and `/opt/seed` afterwards. Rerun with `--reset` to rebuild the sample shop.
+4. Before showing it to anyone, open the site, tap "Try the sample shop" and look at every photo on the
+   shop page and in the newest video. The models do not give the same result every run: on Oct 30 a
+   local run cut the Nut Cracker pack down to the peanuts printed on it, where the run before had the
+   whole pack. If a photo is wrong, rerun with `--reset` (about $0.33). The script prints each video's
+   questions; the demo's "Fix prices" moment only appears when the newest video has one.
 
 The WhatsApp number is where "Order on WhatsApp" taps in every copy of the sample shop go, so use a
 number you are happy to receive test orders on. The sample shop itself is never public; only copies are.

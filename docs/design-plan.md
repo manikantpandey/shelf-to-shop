@@ -66,6 +66,14 @@ FRONT DOOR (phone)               FRONT DOOR (laptop)
 - Fixed on the way: the browser theme colour, the manifest colours and the app icon were still revision 1 blue.
   They are now board green with the marigold tag.
 
+**Home for demo visitors**. A judge who taps "Try the sample shop" landed on Home with nothing telling them
+what to try. Home now opens with a demo path for copies of the sample shop only: four real tasks in order
+(a true sequence, so numbered), each with the button that does it, ticked when done: check the newest video
+and publish it, see how a video was read, send an order from the shop page as a customer, mark it packed.
+When all four are done it offers Record. It can be hidden; it is remembered in the browser, not the server.
+The "Your shop" panel also gained a shop window: the first four (phone) or six (laptop) items on the shop
+with their price tags, as one large target that opens the shop page.
+
 **Motion rules, revision 4**. Still only in answer to a touch or to show the pipeline, all off under
 `prefers-reduced-motion`:
 

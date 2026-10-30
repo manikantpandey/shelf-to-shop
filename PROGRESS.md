@@ -50,7 +50,21 @@ Recent). What was taken from each and what was left out is in `docs/design-plan.
 - Checked at 360×800 and 1440×900 in English and Hindi; fixed on the way: three class-name clashes with
   older styles (`.heard`, `.app`, `.hero`), stretched demo photos, a wrapped Hindi figure, footer sizing.
 
+- **Oct 30, after "is it ready?"**: pushed `main` (17 commits). At your request the front-page frame of
+  your hand and shop was replaced before pushing, in the unpushed commits too, so it never reached GitHub.
+- **Demo polish (your choice)**: Home opens with a four-step demo path for sample-shop copies (check and
+  publish the newest video, see how a video was read, order as a customer, mark it packed), each with its
+  button and a tick when done; "Your shop" shows a shop window of item photos with price tags. Walked the
+  whole judge path in a phone-sized browser against the re-seeded sample shop: all four steps tick.
+- Re-seeded the local sample shop with the current matcher ($0.33): all three videos priced, the newest
+  has no questions (model run varied from the eval run, which had two missing prices).
+
 ### Broken / risks
+- **The demo's "Fix prices" moment depends on the model run.** For a question every time, shoot a 20 s
+  clip where you say a price above the printed one (say "chheh rupaye" for a ₹5 pack) and use it as the
+  sample shop's third video.
+- Photos vary between seeding runs too (this run cut the Nut Cracker pack down to the printed peanuts);
+  runbook 1.4 step 4 now says to check every sample photo after seeding.
 - Shop links share the generic preview; a per-shop preview needs a server-rendered page (plan, open
   question 5).
 - Local dev note: shop photos only load when the API knows its own address (`API_BASE_URL=http://localhost:8000`,
@@ -59,8 +73,10 @@ Recent). What was taken from each and what was left out is in `docs/design-plan.
   `evals/report.md`.
 
 ### Test results
-- Web: `tsc` clean, vitest **16 passed** (3 new for the front door), Playwright **2 passed** (the journey
-  now starts on the front door), production build clean.
+- Oct 30: `make check` clean (ruff, mypy strict 91 files, import-linter 2/2, pytest **270 passed**);
+  gitleaks over all 77 commits: no leaks; `npm audit`: 0 high.
+- Web: `tsc` clean, vitest **20 passed** (3 for the front door, 4 for the demo path), Playwright
+  **2 passed** (the journey now starts on the front door), production build clean.
 - No Python changed this session.
 
 ### Next 3 tasks
