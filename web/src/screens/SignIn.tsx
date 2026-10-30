@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError, setCsrf, type Workspace } from "../api";
+import { startedFromSample } from "../demoPath";
 import { Signboard } from "../components/Signboard";
 import { useSession } from "../session";
 import { LanguageButton } from "../Shell";
@@ -24,6 +25,7 @@ export function useStartShop() {
         json: { ...body, language: i18n.language === "hi" ? "hi" : "en" },
       });
       setCsrf(res.csrf_token);
+      startedFromSample(kind === "sample");
       await refresh();
       navigate(kind === "sample" ? "/home" : "/setup");
     } catch (err) {

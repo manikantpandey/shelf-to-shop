@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
 import { api, apiUrl, type JobDetails } from "../api";
+import { sawVideoDetails } from "../demoPath";
 import { formatINR } from "../format";
 import { Shell } from "../Shell";
 import { STAGES } from "./Processing";
@@ -28,7 +29,12 @@ export function VideoDetail() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<JobDetails>(`/api/v1/jobs/${jobId}/details`).then(setData).catch(() => setError(t("app.offline")));
+    api<JobDetails>(`/api/v1/jobs/${jobId}/details`)
+      .then((d) => {
+        setData(d);
+        sawVideoDetails();
+      })
+      .catch(() => setError(t("app.offline")));
   }, [jobId, t]);
 
   if (!data) {

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { api, apiUrl, type MyCatalog, type Stats, type VideoSummary } from "../api";
+import { api, apiUrl, type Item, type MyCatalog, type Stats, type VideoSummary } from "../api";
+import { hasSeenVideoDetails, hidePath, showPath } from "../demoPath";
 import { Icon } from "../components/Icon";
 import { Signboard } from "../components/Signboard";
 import { formatINR } from "../format";
@@ -10,12 +11,71 @@ import { useSession } from "../session";
 import { Shell } from "../Shell";
 import { VideoRow } from "./Videos";
 
+const PATH = ["fix", "read", "order", "pack"] as const;
+
+/** Four real tasks that walk a demo visitor through the sample shop; each ticks when it is done. */
+export function DemoPath({ stats, videos, url, onHide }: {
+  stats: Stats;
+  videos: VideoSummary[];
+  url: string | null;
+  onHide: () => void;
+}) {
+  const { t } = useTranslation();
+  const toCheck = videos.find((v) => v.status === "needs_review");
+  const read = videos.find((v) => v.status === "published") ?? videos[0];
+  const c = stats.orders.counts;
+  const orders = c.new + c.packed + c.delivered + c.cancelled;
+  const done = {
+    fix: !toCheck,
+    read: hasSeenVideoDetails(),
+    order: orders > 0,
+    pack: c.packed + c.delivered > 0,
+  };
+  const go = {
+    fix: toCheck ? (
+      <Link className="btn small primary" to={`/jobs/${toCheck.id}/review`}>
+        {toCheck.open_flags ? t("home.check") : t("home.review")}
+      </Link>
+    ) : null,
+    read: read ? <Link className="btn small" to={`/videos/${read.id}`}>{t("path.read_go")}</Link> : null,
+    order: url ? <a className="btn small" href={url} target="_blank" rel="noopener">{t("home.open_shop")}</a> : null,
+    pack: <Link className="btn small" to="/orders">{t("home.see_orders")}</Link>,
+  };
+  const all = PATH.every((k) => done[k]);
+  return (
+    <section className="panel demo-path" aria-labelledby="path-h">
+      <div className="panel-head">
+        <h2 id="path-h">{t("path.title")}</h2>
+        <button type="button" className="btn small quiet" onClick={onHide}>{t("path.hide")}</button>
+      </div>
+      <p className="muted small">{t("path.lead")}</p>
+      <ol className="steps">
+        {PATH.map((k, i) => (
+          <li key={k} className={done[k] ? "done" : ""}>
+            <span className="n">{done[k] ? <Icon name="check" size={16} /> : i + 1}</span>
+            <span className="what">{t(`path.${k}`)}</span>
+            {done[k] ? <span className="state">{t("path.done")}</span> : go[k]}
+          </li>
+        ))}
+      </ol>
+      {all ? (
+        <div className="row">
+          <p className="ok grow">{t("path.all_done")}</p>
+          <Link className="btn record-btn" to="/record"><Icon name="record" />{t("nav.record")}</Link>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function Home() {
   const { t, i18n } = useTranslation();
   const { me } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [videos, setVideos] = useState<VideoSummary[]>([]);
   const [catalog, setCatalog] = useState<MyCatalog | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [path, setPath] = useState(showPath);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,11 +84,13 @@ export function Home() {
       api<Stats>("/api/v1/stats"),
       api<{ videos: VideoSummary[] }>("/api/v1/videos"),
       api<MyCatalog>("/api/v1/catalog"),
+      api<{ items: Item[] }>("/api/v1/items"),
     ])
-      .then(([s, v, c]) => {
+      .then(([s, v, c, i]) => {
         setStats(s);
         setVideos(v.videos);
         setCatalog(c);
+        setItems(i.items);
       })
       .catch(() => setError(t("app.offline")));
   }, [t]);
@@ -58,6 +120,7 @@ export function Home() {
   const toCheck = videos.find((v) => v.status === "needs_review");
   const working = videos.find((v) => v.status === "queued" || v.status === "running");
   const max = Math.max(1, ...stats.by_day.flatMap((d) => [d.views, d.orders]));
+  const onShop = items.filter((it) => it.live && it.image_url && it.price_display).slice(0, 6);
   const weekday = new Intl.DateTimeFormat(i18n.language === "hi" ? "hi-IN" : "en-IN", { weekday: "short" });
 
   return (
@@ -70,7 +133,8 @@ export function Home() {
           <span className="btn small primary">{t("home.see_orders")}</span>
         </Link>
       ) : null}
-      {toCheck ? (
+      {path ? <DemoPath stats={stats} videos={videos} url={url} onHide={() => { hidePath(); setPath(false); }} /> : null}
+      {toCheck && !path ? (
         <Link className="notice" to={`/jobs/${toCheck.id}/review`}>
           <Icon name="alert" />
           <span className="grow">
@@ -97,6 +161,17 @@ export function Home() {
               {t("home.live", { count: stats.items_live })}{" "}
               <a className="url" href={url} target="_blank" rel="noopener">{url.replace(/^https?:\/\//, "")}</a>
             </p>
+            {onShop.length ? (
+              // The shop window: what a customer sees first, and a big target to open it.
+              <a className="window" href={url} target="_blank" rel="noopener" aria-label={t("home.open_shop")}>
+                {onShop.map((it) => (
+                  <span className="w-tile" key={it.id}>
+                    <img src={apiUrl(it.image_url ?? "")} alt="" loading="lazy" />
+                    <span className="pricetag">{it.price_display}</span>
+                  </span>
+                ))}
+              </a>
+            ) : null}
             <div className="row">
               <a className="btn primary" href={share} target="_blank" rel="noopener">
                 <Icon name="chat" />

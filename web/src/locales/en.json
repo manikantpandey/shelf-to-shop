@@ -168,6 +168,18 @@
     "sales_today_other": "Sales today ({{count}} orders)",
     "your_shop": "Your shop"
   },
+  "path": {
+    "title": "Try the sample shop in four steps",
+    "lead": "This shop was made from three real shelf videos. Your copy is private, so change anything.",
+    "fix": "Check the newest video, fix any prices and publish it",
+    "read": "See how a video was read and where each price came from",
+    "order": "Open your shop page and send an order as a customer",
+    "pack": "Mark the order packed in your order book",
+    "read_go": "Open the video",
+    "done": "Done",
+    "hide": "Hide",
+    "all_done": "That is the whole loop. Next: record your own shelf."
+  },
   "videos": {
     "title": "Videos",
     "new": "Record a video",
