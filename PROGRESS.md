@@ -53,6 +53,22 @@ for engine/shelf/web code.
   deleted afterwards. Walked the whole judge path on the live site at 360x800: front door, sample shop,
   answer the question and publish, video details, order as a customer, mark packed, "whole loop" done.
 - Docs: runbook and privacy say us-east-1; privacy states data is stored outside India.
+- **Sample photos**: Slice and the large Mirinda bottle now use Open Food Facts pack photos (credited,
+  CC BY-SA); the sliced bread and the toffee jar are hidden (no honest match: any branded photo would show
+  a different product). Pepsi keeps its flagged cut-out on purpose: fixing it with "Find pack photo" is a
+  live demo of that feature.
+- **Front page** (you said it looked empty and did not say what we offer): ruled-ledger hero with tagged
+  item tiles, "Orders arrive on your WhatsApp" with a chat showing the exact order message, "Everything in
+  Shelf-to-Shop" (twelve features), wider content on big screens, alternating full-width sections.
+  Fixed: after opening the demo, `/` no longer bounces to Home ("Open your shop" instead), and the app
+  links back from the sidebar and the More menu.
+- **Offers** (built by parallel agents, reviewed and integrated here): Diwali, festival, weekend, new stock,
+  clearance or own name; percent off on everything, a section or chosen items, until a date; prices drop
+  with the old price shown as "Was", a banner and "25% off" marks on the shop page, back to normal when it
+  ends (by hand or automatically). "Tell customers on WhatsApp" opens WhatsApp with the message ready.
+  New table `offers` (migration `4cc4fb15cb81`), 11 server tests, 19 web tests.
+- **docs/integration/phoenix.md**: the SocialPulse/Phoenix tool API as a design doc (manifest, keys and
+  signing, webhooks, review link, sinks, error codes, worked example, verifier code with test vectors).
 
 ### Broken / risks
 - Two weak photos in this seed: the sliced bread loaf (a crumpled scrap) and the toffee jar (a blob). Every
@@ -66,7 +82,7 @@ for engine/shelf/web code.
 ### Next 3 tasks
 1. Upload the feed to Commerce Manager from the live shop (needs you: confirms Meta accepts our product links).
 2. Spike 5: record on a real Android phone at https://shop.shankhyaai.com (now possible over HTTPS).
-3. `docs/integration/phoenix.md` as a design doc.
+3. Polish from your demo run-through (shop owners' feedback on Offers wording).
 
 ---
 

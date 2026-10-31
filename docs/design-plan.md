@@ -74,6 +74,15 @@ When all four are done it offers Record. It can be hidden; it is remembered in t
 The "Your shop" panel also gained a shop window: the first four (phone) or six (laptop) items on the shop
 with their price tags, as one large target that opens the shop page.
 
+**Offers (Nov 1)**. Shopkeepers asked for festival sales. Offers is a seller screen (sidebar, More menu): pick
+the occasion (Diwali, festival, weekend, new stock, clearance, own name), a percent off or "announcement
+only", what it covers (everything, one section, chosen items) and the last day; a live preview shows the
+customer message. While it runs, the shop page shows a marigold banner in the customer's language and a
+"25% off" mark on each item, and the struck-through price reads "Was ₹4" (the shop's own old price, not
+the printed MRP). "Tell customers on WhatsApp" opens WhatsApp with the message ready for a broadcast list
+or Status; the copy says plainly that Shelf-to-Shop never messages anyone itself. The front page's feature
+grid lists it, and the share kit moved into the shop page cell so the grid stays at twelve.
+
 **Motion rules, revision 4**. Still only in answer to a touch or to show the pipeline, all off under
 `prefers-reduced-motion`:
 

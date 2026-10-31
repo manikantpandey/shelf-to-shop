@@ -76,6 +76,7 @@ Checks: `make check` (ruff, mypy strict, import boundaries, pytest), `make web-t
 | Items | Stock and prices: sold out, MRP and offers, sections, pin, hide, bulk price changes, three ways to replace a weak photo (own photo, a better moment in the video, a pack photo from Open Food Facts) |
 | Orders | Basket orders from the shop page: new, packed, delivered, paid |
 | Home | Today's orders and sales, open questions, the shop link, and downloads of the Meta catalog file (CSV) and the photo zip |
+| Offers | Run a Diwali, festival, weekend or clearance sale: percent off on everything, a section or chosen items, until a date. Prices drop on the shop page (old price struck through) and come back when it ends; a banner tells customers, and "Tell customers on WhatsApp" opens WhatsApp with the message ready for a broadcast list or Status (Shelf-to-Shop never messages anyone itself) |
 | Share | Shop link, QR poster for the counter, a WhatsApp Status picture for any item |
 | Settings | Language (English, Hindi), video retention, download all data, delete the shop |
 
@@ -206,7 +207,7 @@ Details and the honest gaps: [docs/security.md](docs/security.md) (OWASP ASVS 5.
   Commerce Manager upload, which is also what settles whether Meta accepts our shop domain as the
   product link.
 - The SocialPulse integration mode (`APP_MODE=socialpulse`: a tool API for the Phoenix assistant, signed
-  webhooks) is designed in the build plan but not built.
+  webhooks) is designed in [docs/integration/phoenix.md](docs/integration/phoenix.md) but not built.
 - Eval clips are few and short; numbers above are a sanity check, not a benchmark.
 
 ## Roadmap
