@@ -549,8 +549,10 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
   border: 1px dashed var(--board); border-radius: var(--r-button); }
 
 /* --- Revision 4: the front door (landing at /) ------------------------------------------ */
-.front { min-height: 100dvh; background: var(--ground); }
-.front-top { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;
+.front { --front-max: 1120px; min-height: 100dvh; background: var(--ground); }
+@media (min-width: 1440px) { .front { --front-max: 1320px; } }
+@media (min-width: 1760px) { .front { --front-max: 1440px; } }
+.front-top { max-width: var(--front-max); margin: 0 auto; display: flex; align-items: center; justify-content: space-between;
   gap: var(--s-12); padding: var(--s-12) var(--s-16); }
 .front-top .signboard { padding: var(--s-8) var(--s-16); }
 .front-top .signboard::before { inset: 4px; border-width: 1.5px; }
@@ -559,7 +561,7 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
 .lead { font-size: var(--t-20); line-height: 1.45; }
 :lang(hi) .lead { line-height: 1.65; }
 
-.front-hero { max-width: 1120px; margin: 0 auto; padding: var(--s-16) var(--s-16) var(--s-48); display: grid; gap: var(--s-32); }
+.front-hero { max-width: var(--front-max); margin: 0 auto; padding: var(--s-16) var(--s-16) var(--s-48); display: grid; gap: var(--s-32); }
 .hero-copy { display: flex; flex-direction: column; gap: var(--s-16); align-self: center; }
 .front-hero h1 { font-size: 2.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
 :lang(hi) .front-hero h1 { line-height: 1.35; letter-spacing: 0; }
@@ -664,7 +666,7 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
 @keyframes fill { from { transform: scaleX(0); } }
 
 /* Sections below the hero: ruled bands, one idea each. */
-.band { max-width: 1120px; margin: 0 auto; padding: var(--s-48) var(--s-16); display: grid; gap: var(--s-24);
+.band { max-width: var(--front-max); margin: 0 auto; padding: var(--s-48) var(--s-16); display: grid; gap: var(--s-24);
   border-top: 1px solid var(--line); }
 .band h2 { font-size: var(--t-30); font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
 :lang(hi) .band h2 { line-height: 1.4; letter-spacing: 0; }
@@ -704,16 +706,10 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
   .proof-figs .num { font-size: 3rem; }
 }
 
-.made-rows { list-style: none; margin: 0; padding: 0; display: grid; }
-.made-rows li { display: grid; grid-template-columns: var(--tap) 1fr; gap: var(--s-16); padding: var(--s-16) 0; border-top: 1px solid var(--line); }
-.made-rows .ic { width: var(--tap); height: var(--tap); border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--board); }
-.made-rows h3 { font-size: var(--t-20); }
-@media (min-width: 900px) { .made-rows { grid-template-columns: repeat(3, 1fr); column-gap: var(--s-32); } }
-
 /* Footer: the street-level signboard, as wide as the screen. */
-.front-foot { margin-top: var(--s-48); padding: var(--s-48) 0 var(--s-24); background: var(--board); color: var(--paper);
+.front-foot { margin-top: 0; padding: var(--s-48) 0 var(--s-24); background: var(--board); color: var(--paper);
   display: grid; gap: var(--s-32); }
-.front-foot > * { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 var(--s-16); }
+.front-foot > * { width: 100%; max-width: var(--front-max); margin: 0 auto; padding: 0 var(--s-16); }
 .foot-cta { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-16); }
 .foot-line { font-size: var(--t-30); font-weight: 700; line-height: 1.15; max-width: 18ch; }
 :lang(hi) .foot-line { line-height: 1.4; }
@@ -787,3 +783,103 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* --- Revision 4b: front door depth and WhatsApp ------------------------------------------ */
+/* The top of the page is ruled like a bahi-khata: hairlines every 40 px that fade out below the hero. */
+.front {
+  background:
+    linear-gradient(to bottom, transparent 0 520px, var(--ground) 860px) top / 100% 860px no-repeat,
+    repeating-linear-gradient(to bottom, transparent 0 39px, rgb(23 32 28 / 0.07) 39px 40px) top / 100% 860px no-repeat,
+    var(--ground);
+}
+@media (min-width: 900px) {
+  /* ...with the ledger's margin rule, in marigold, just left of the content. */
+  .front {
+    background:
+      linear-gradient(to bottom, transparent 0 640px, var(--ground) 980px) top / 100% 980px no-repeat,
+      linear-gradient(to right, transparent calc(50% - var(--front-max) / 2 - 26px), rgb(246 181 38 / 0.7) calc(50% - var(--front-max) / 2 - 26px) calc(50% - var(--front-max) / 2 - 24px),
+        transparent calc(50% - var(--front-max) / 2 - 24px) calc(50% - var(--front-max) / 2 - 20px), rgb(246 181 38 / 0.7) calc(50% - var(--front-max) / 2 - 20px) calc(50% - var(--front-max) / 2 - 18px),
+        transparent calc(50% - var(--front-max) / 2 - 18px)) top / 100% 980px no-repeat,
+      repeating-linear-gradient(to bottom, transparent 0 39px, rgb(23 32 28 / 0.07) 39px 40px) top / 100% 980px no-repeat,
+      var(--ground);
+  }
+}
+
+.hero-facts { list-style: none; margin: var(--s-8) 0 0; padding: 0; display: grid; gap: var(--s-8); }
+.hero-facts li { display: flex; align-items: center; gap: var(--s-12); font-weight: 500; }
+.hero-facts svg { flex: 0 0 auto; color: var(--board); }
+
+.hero-visual { position: relative; }
+.hero-visual .demo { position: relative; z-index: 1; }
+.float-tiles { display: none; }
+@media (min-width: 1100px) {
+  .float-tiles { display: block; position: absolute; inset: 0; pointer-events: none; }
+  .float-tile { position: absolute; width: 116px; overflow: hidden; background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--r-tile); box-shadow: 0 14px 28px -18px rgb(23 32 28 / 0.45); }
+  .float-tile img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+  .float-tile .pricetag { position: absolute; left: 0; bottom: 8px; font-size: var(--t-17); padding: 2px 9px 2px 15px;
+    clip-path: polygon(9px 0, 100% 0, 100% 100%, 9px 100%, 0 50%); }
+  .f-nutcracker { left: -34px; top: 56px; transform: rotate(-5deg); }
+  .f-peanuts { right: -40px; top: 230px; transform: rotate(4deg); }
+  .f-tadka { left: -22px; top: 430px; transform: rotate(3deg); }
+}
+
+/* "Orders arrive on your WhatsApp" */
+@media (min-width: 900px) { .band.wa { grid-template-columns: 1fr 1fr; align-items: center; gap: var(--s-48); } }
+.wa-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-12); counter-reset: wa; }
+.wa-steps li { counter-increment: wa; display: grid; grid-template-columns: 32px 1fr; gap: var(--s-12); align-items: start; }
+.wa-steps li::before { content: counter(wa); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--board); color: var(--paper); font-size: var(--t-15); font-weight: 700; }
+
+/* A WhatsApp chat as the shopkeeper sees it. WhatsApp's own light-theme colours, scoped to the mock. */
+.wa-chat { --wa-head: #008069; --wa-bg: #efeae2; --wa-out: #d9fdd3; --wa-meta: #5d6b74; --wa-link: #0270a3; --wa-tick: #53bdeb;
+  margin: 0; display: flex; flex-direction: column; align-items: center; gap: var(--s-12); }
+.wa-chat figcaption { max-width: 360px; text-align: center; }
+.wa-phone { width: min(340px, 100%); overflow: hidden; border: 9px solid var(--ink); border-radius: 30px; background: var(--wa-bg);
+  box-shadow: 0 28px 48px -28px rgb(23 32 28 / 0.6); font-size: 0.875rem; color: #111b21; }
+.wa-head { display: flex; align-items: center; gap: 10px; padding: 16px 12px 10px; background: var(--wa-head); color: #fff; }
+.wa-avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #dfe5e7; color: #3b4a54;
+  font-weight: 700; }
+.wa-who { display: flex; flex-direction: column; line-height: 1.2; }
+.wa-who small { font-size: 0.78em; opacity: 0.9; }
+.wa-body { min-height: 360px; padding: 12px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.wa-day { align-self: center; padding: 3px 10px; border-radius: 8px; background: #fff; color: var(--wa-meta); font-size: 0.75em;
+  box-shadow: 0 1px 0.5px rgb(11 20 26 / 0.13); }
+.wa-msg { position: relative; max-width: 88%; display: flex; flex-direction: column; gap: 1px; padding: 6px 9px 20px; border-radius: 8px;
+  line-height: 1.38; box-shadow: 0 1px 0.5px rgb(11 20 26 / 0.13); font-variant-numeric: tabular-nums; }
+.wa-msg.in { align-self: flex-start; background: #fff; border-top-left-radius: 0; }
+.wa-msg.out { align-self: flex-end; background: var(--wa-out); border-top-right-radius: 0; }
+.wa-msg .wa-link { color: var(--wa-link); overflow-wrap: anywhere; }
+.wa-time { position: absolute; right: 8px; bottom: 3px; display: inline-flex; align-items: center; gap: 2px; color: var(--wa-meta);
+  font-size: 0.7em; }
+.wa-msg.out .wa-time svg, .bubble .wa-time svg { color: var(--wa-tick); }
+.wa-input { margin: 0 8px 10px; padding: 9px 14px; border-radius: 20px; background: #fff; color: var(--wa-meta); }
+
+/* The demo phone's order, sent from the customer's WhatsApp. */
+.bubble { gap: 0.1em; padding: 0.55em 0.8em 1.5em; border: 0; border-radius: 10px 0 10px 10px; background: #d9fdd3; color: #111b21; }
+.bubble .wa-label { font-size: 0.75em; font-weight: 700; color: #00664f; }
+.bubble .wa-time { right: 0.6em; bottom: 0.35em; color: #5d6b74; }
+
+/* Bands alternate full-width backgrounds (ground, paper, tint) so wide screens are not one flat field. */
+.band.alt, .band.tinted { border-top: 0; background: var(--band-bg); box-shadow: 0 0 0 100vmax var(--band-bg);
+  clip-path: inset(0 -100vmax); }
+.band.alt { --band-bg: var(--paper); }
+.band.tinted { --band-bg: var(--tint); }
+.band.alt + .band, .band.tinted + .band { border-top: 0; }
+
+/* Everything in Shelf-to-Shop: a ruled grid, hairlines between cells, no cards or shadows. */
+.feature-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1px;
+  overflow: hidden; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-panel); }
+.feature-grid li { display: grid; grid-template-columns: 44px 1fr; column-gap: var(--s-12); row-gap: 2px; align-content: start;
+  padding: var(--s-16) var(--s-16) var(--s-24); background: var(--paper); }
+.feature-grid .ic { grid-row: span 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--tint); color: var(--board); }
+.feature-grid h3 { font-size: var(--t-17); }
+.feature-grid p { font-size: var(--t-15); }
+@media (min-width: 640px) { .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1300px) { .feature-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* The way back to the front door from inside the app. */
+.side-front { display: inline-flex; align-items: center; min-height: 40px; color: var(--paper); font-weight: 600; text-decoration: none; }
+.side-front:hover { text-decoration: underline; text-underline-offset: 4px; }

@@ -10,6 +10,7 @@ const LINKS: { to: string; icon: IconName; key: string }[] = [
   { to: "/sections", icon: "sections", key: "sections" },
   { to: "/share", icon: "qr", key: "share" },
   { to: "/settings", icon: "settings", key: "settings" },
+  { to: "/", icon: "info", key: "front" },
 ];
 
 /** Phones: everything that is not a daily task, one tap away. */

@@ -127,6 +127,7 @@ export function Shell({ title, children, board, actions, footer, back, bare = fa
               ))}
             </nav>
             <div className="side-foot">
+              <Link to="/" className="side-front">{t("more.front")}</Link>
               <LanguageButton className="lang on-board" />
               {demo ? <span className="demo-note">{t("app.demo_note")}</span> : null}
             </div>

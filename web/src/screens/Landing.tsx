@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { Icon, type IconName } from "../components/Icon";
 import { Signboard } from "../components/Signboard";
@@ -96,9 +96,11 @@ function Screen({ step }: { step: number }) {
         <span>{t("shop.view_basket", { total: formatINR(total) })}</span>
       </span>
       <div className="bubble">
-        <strong>{t("landing.demo.order_head", { shop: t("landing.demo.shop_name") })}</strong>
+        <span className="wa-label">{t("landing.wa.app")}</span>
+        <strong>{t("landing.demo.order_head", { shop: t("landing.demo.shop_name"), number: 12 })}</strong>
         {inBasket.map((it) => <span key={it.key}>{t("landing.demo.order_line", { item: name(it.key), price: formatINR(it.price) })}</span>)}
         <strong>{t("landing.demo.order_total", { total: formatINR(total) })}</strong>
+        <span className="wa-time">10:42 <Icon name="check2" size={13} /></span>
       </div>
     </div>
   );
@@ -169,6 +171,48 @@ function Demo() {
   );
 }
 
+const ORDER = [
+  { key: "nutcracker", qty: 1, price: 4 },
+  { key: "slice", qty: 2, price: 20 },
+  { key: "tadka", qty: 3, price: 4 },
+] as const;
+
+function WhatsAppChat() {
+  const { t } = useTranslation();
+  const total = ORDER.reduce((sum, l) => sum + l.qty * l.price, 0);
+  return (
+    <figure className="wa-chat" aria-labelledby="wa-chat-cap">
+      <div className="wa-phone" aria-hidden="true">
+        <div className="wa-head">
+          <Icon name="back" size={18} />
+          <span className="wa-avatar">{t("landing.wa.customer").slice(0, 1)}</span>
+          <span className="wa-who"><strong>{t("landing.wa.customer")}</strong><small>{t("landing.wa.online")}</small></span>
+        </div>
+        <div className="wa-body">
+          <span className="wa-day">{t("landing.wa.today")}</span>
+          <div className="wa-msg in">
+            <strong>{t("landing.demo.order_head", { shop: t("landing.demo.shop_name"), number: 12 })}</strong>
+            {ORDER.map((l) => (
+              <span key={l.key}>{t("landing.wa.line", { qty: l.qty, item: t(`landing.wa.item_${l.key}`), cost: formatINR(l.qty * l.price) })}</span>
+            ))}
+            <strong>{t("landing.demo.order_total", { total: formatINR(total) })}</strong>
+            <span>{t("landing.wa.name", { name: t("landing.wa.customer") })}</span>
+            <span>{t("landing.wa.note")}</span>
+            <span className="wa-link">{t("landing.wa.shop_page")}</span>
+            <span className="wa-time">10:42</span>
+          </div>
+          <div className="wa-msg out">
+            <span>{t("landing.wa.reply")}</span>
+            <span className="wa-time">10:43 <Icon name="check2" size={13} /></span>
+          </div>
+        </div>
+        <div className="wa-input"><span>{t("landing.wa.type")}</span></div>
+      </div>
+      <figcaption id="wa-chat-cap" className="muted small">{t("landing.wa.caption")}</figcaption>
+    </figure>
+  );
+}
+
 /** What one video gives the shop, printed like the slip from a billing machine. */
 function Receipt() {
   const { t } = useTranslation();
@@ -196,14 +240,18 @@ function Receipt() {
   );
 }
 
-const MADE: [string, IconName][] = [["lang", "lang"], ["phone", "phone"], ["privacy", "shield"]];
+const FEATURES: [string, IconName][] = [
+  ["record", "record"], ["found", "items"], ["photos", "camera"], ["questions", "alert"],
+  ["page", "store"], ["orders", "chat"], ["book", "orders"], ["stock", "sections"],
+  ["feed", "download"], ["share", "qr"], ["lang", "lang"], ["privacy", "shield"],
+];
+const HERO_FACTS: [string, IconName][] = [["whatsapp", "chat"], ["lang", "lang"], ["approve", "shield"]];
 
-/** The front door at `/`: what the app does, the proof, and the two ways in. Signed-in sellers go Home. */
+/** The front door at `/`: what the app does, the proof, and the two ways in (or back to your shop). */
 export function Landing() {
   const { t } = useTranslation();
   const { me } = useSession();
   const { signIn, busy, error } = useStartShop();
-  if (me) return <Navigate to="/home" replace />;
 
   const sample = () => void signIn({ sample: true }, "sample");
   const sampleLabel = busy === "sample" ? t("signin.opening") : t("signin.sample");
@@ -221,16 +269,63 @@ export function Landing() {
             <h1 id="hero-h">{t("landing.title")}</h1>
             <p className="lead">{t("landing.lead")}</p>
             <div className="hero-acts">
-              <button type="button" className="btn primary big" onClick={sample} disabled={busy !== ""}>{sampleLabel}</button>
+              {me ? (
+                <Link className="btn primary big" to="/home">{t("landing.open_shop")}</Link>
+              ) : (
+                <button type="button" className="btn primary big" onClick={sample} disabled={busy !== ""}>{sampleLabel}</button>
+              )}
               <Link className="btn big" to="/signin">{t("landing.own")}</Link>
             </div>
             {error ? <p className="error" role="alert">{error}</p> : null}
-            <p className="muted small">{t("landing.note")}</p>
+            <ul className="hero-facts">
+              {HERO_FACTS.map(([key, icon]) => (
+                <li key={key}><Icon name={icon} size={20} />{t(`landing.fact.${key}`)}</li>
+              ))}
+            </ul>
           </div>
-          <Demo />
+          <div className="hero-visual">
+            {/* Three real items from the sample shop, as tagged tiles around the phone (laptops only). */}
+            <div className="float-tiles" aria-hidden="true">
+              {ITEMS.map((it) => (
+                <span key={it.key} className={`float-tile f-${it.key}`}>
+                  <img src={`/landing/${it.key}.jpg`} alt="" width={400} height={400} />
+                  <span className="pricetag">{formatINR(it.price)}</span>
+                </span>
+              ))}
+            </div>
+            <Demo />
+          </div>
         </section>
 
-        <section className="band get" aria-labelledby="get-h">
+        <section className="band wa alt" aria-labelledby="wa-h">
+          <div className="stack">
+            <h2 id="wa-h">{t("landing.wa.title")}</h2>
+            <p className="lead">{t("landing.wa.lead")}</p>
+            <ol className="wa-steps">
+              <li>{t("landing.wa.step_1")}</li>
+              <li>{t("landing.wa.step_2")}</li>
+              <li>{t("landing.wa.step_3")}</li>
+            </ol>
+            <p className="muted">{t("landing.wa.catalog")}</p>
+          </div>
+          <WhatsAppChat />
+        </section>
+
+        <section className="band features" aria-labelledby="features-h">
+          <h2 id="features-h">{t("landing.features_title")}</h2>
+          <p className="lead">{t("landing.features_lead")}</p>
+          <ul className="feature-grid">
+            {FEATURES.map(([key, icon]) => (
+              <li key={key}>
+                <span className="ic"><Icon name={icon} /></span>
+                <h3>{t(`landing.feature.${key}`)}</h3>
+                <p className="muted">{t(`landing.feature.${key}_text`)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="band get tinted" aria-labelledby="get-h">
           <div className="stack">
             <h2 id="get-h">{t("landing.get_title")}</h2>
             <p className="lead">{t("landing.get_lead")}</p>
@@ -239,7 +334,7 @@ export function Landing() {
           <Receipt />
         </section>
 
-        <section className="band proof" aria-labelledby="proof-h">
+        <section className="band proof alt" aria-labelledby="proof-h">
           <h2 id="proof-h">{t("landing.proof_title")}</h2>
           <p className="lead">{t("landing.proof_lead", { videos: EVALS.videos, real: EVALS.real, items: EVALS.items })}</p>
           <ul className="proof-figs">
@@ -252,26 +347,17 @@ export function Landing() {
           <p>{link(`${DOCS}/evals/report.md`, t("landing.proof_link"))}</p>
         </section>
 
-        <section className="band made" aria-labelledby="made-h">
-          <h2 id="made-h">{t("landing.made_title")}</h2>
-          <ul className="made-rows">
-            {MADE.map(([key, icon]) => (
-              <li key={key}>
-                <span className="ic"><Icon name={icon} /></span>
-                <div className="stack" style={{ gap: 4 }}>
-                  <h3>{t(`landing.made.${key}`)}</h3>
-                  <p className="muted">{t(`landing.made.${key}_text`)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+
       </main>
 
       <footer className="front-foot dark">
         <div className="foot-cta">
           <p className="foot-line">{t("landing.footer_cta")}</p>
-          <button type="button" className="btn record-btn big" onClick={sample} disabled={busy !== ""}>{sampleLabel}</button>
+          {me ? (
+            <Link className="btn record-btn big" to="/home">{t("landing.open_shop")}</Link>
+          ) : (
+            <button type="button" className="btn record-btn big" onClick={sample} disabled={busy !== ""}>{sampleLabel}</button>
+          )}
         </div>
         <nav className="foot-links" aria-label={t("landing.footer_nav")}>
           <div>
