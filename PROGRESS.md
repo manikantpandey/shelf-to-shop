@@ -22,6 +22,54 @@ for engine/shelf/web code.
 
 ---
 
+## Nov 1: production is live at https://shop.shankhyaai.com
+
+- CloudFormation stack `shelf-to-shop` in **us-east-1** (not Mumbai), `CREATE_COMPLETE` 22:10 UTC Oct 31.
+  Instance `i-0c66f0abd72153cf9` (t3.medium), Elastic IP **54.156.251.160**; SG opens 80/443 only, SSM online.
+- GoDaddy A record `shop` -> 54.156.251.160 added by you; seen on 1.1.1.1 at 22:22 UTC. The Vercel site
+  (`@` -> 216.198.79.1, `www` CNAME) is untouched and still answers.
+- Caddy got a Let's Encrypt certificate (issuer YE2, valid until 30 Jan 2027);
+  `/api/v1/health/ready` returns 200 over normal DNS.
+
+### Next 3 tasks
+1. Feed test: upload the CSV to Commerce Manager now that Meta can fetch `link`/`image_link` from the domain.
+2. Runbook 1.4: seed the sample shop for demo sign-in on the server.
+3. Smoke-test record → review → publish on a real phone against the live site.
+
+---
+
+## Session 12: Nov 1 (deployed to AWS us-east-1)
+
+### Done
+- **Live at https://shop.shankhyaai.com.** CloudFormation stack `shelf-to-shop` in us-east-1 (you chose it
+  over Mumbai): one t3.medium, 30 GiB encrypted disk, Elastic IP 54.156.251.160, no SSH (Session
+  Manager only). Caddy, API, worker and Postgres all up; `/api/v1/health` ok.
+- Secrets in Parameter Store under `/shelf-to-shop/` (SecureString): you ran the script that put them
+  there (the permission guard rightly stopped me copying the Meta key out of `.env`).
+- DNS: you added the GoDaddy A record. HTTPS from Let's Encrypt (expires Jan 29, 2027; Caddy renews it).
+  Caddy is now pinned to Let's Encrypt: before DNS existed it had fallen back to ZeroSSL and registered
+  your email there too.
+- Sample shop seeded on the server from your three clips ($0.30) through a private temporary S3 bucket,
+  deleted afterwards. Walked the whole judge path on the live site at 360x800: front door, sample shop,
+  answer the question and publish, video details, order as a customer, mark packed, "whole loop" done.
+- Docs: runbook and privacy say us-east-1; privacy states data is stored outside India.
+
+### Broken / risks
+- Two weak photos in this seed: the sliced bread loaf (a crumpled scrap) and the toffee jar (a blob). Every
+  demo copy shows them on the shop page. Fix: re-seed (about $0.30, random), or hide those two items in the
+  sample shop.
+- The newest video's question is about a photo (Pepsi), not a price; a clip where you say a price above the
+  printed one would add a "Fix prices" moment.
+- Cost while it runs: about $30-35 a month (t3.medium, disk, public IPv4) plus about $0.10 per video
+  processed. Tear down after the event: runbook section 5.
+
+### Next 3 tasks
+1. Upload the feed to Commerce Manager from the live shop (needs you: confirms Meta accepts our product links).
+2. Spike 5: record on a real Android phone at https://shop.shankhyaai.com (now possible over HTTPS).
+3. `docs/integration/phoenix.md` as a design doc.
+
+---
+
 ## Session 11: Oct 29 (front door, link preview, motion that answers a tap)
 
 You asked for the frontend to take ideas from six galleries (Modulify, Motionin, Landdding, 60fps, Footer,

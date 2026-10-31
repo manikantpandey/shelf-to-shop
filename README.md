@@ -1,5 +1,8 @@
 # Shelf-to-Shop
 
+**Live demo: https://shop.shankhyaai.com** ("Try the sample shop" opens a private copy of a kirana shop
+made from three real shelf videos).
+
 A shopkeeper films the shelf for under a minute, saying prices out loud ("ye neela wala 1200, cotton
 wala 850"). Shelf-to-Shop turns that video into a shop that takes orders:
 
