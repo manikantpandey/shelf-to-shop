@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { api, apiUrl, type Item, type MyCatalog, type Stats, type VideoSummary } from "../api";
+import { api, apiUrl, type Item, type MyCatalog, type Offer, type Offers, type Stats, type VideoSummary } from "../api";
 import { hasSeenVideoDetails, hidePath, showPath } from "../demoPath";
 import { Icon } from "../components/Icon";
 import { Signboard } from "../components/Signboard";
 import { formatINR } from "../format";
+import { formatOfferDay, offerTitle } from "../offers";
 import { useSession } from "../session";
 import { Shell } from "../Shell";
 import { VideoRow } from "./Videos";
@@ -75,6 +76,7 @@ export function Home() {
   const [videos, setVideos] = useState<VideoSummary[]>([]);
   const [catalog, setCatalog] = useState<MyCatalog | null>(null);
   const [items, setItems] = useState<Item[]>([]);
+  const [offer, setOffer] = useState<Offer | null>(null);
   const [path, setPath] = useState(showPath);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
@@ -85,12 +87,15 @@ export function Home() {
       api<{ videos: VideoSummary[] }>("/api/v1/videos"),
       api<MyCatalog>("/api/v1/catalog"),
       api<{ items: Item[] }>("/api/v1/items"),
+      // The offer notice is extra: Home still opens if this one call fails.
+      api<Offers>("/api/v1/offers").catch(() => null),
     ])
-      .then(([s, v, c, i]) => {
+      .then(([s, v, c, i, o]) => {
         setStats(s);
         setVideos(v.videos);
         setCatalog(c);
         setItems(i.items);
+        setOffer(o?.active ?? null);
       })
       .catch(() => setError(t("app.offline")));
   }, [t]);
@@ -122,6 +127,7 @@ export function Home() {
   const max = Math.max(1, ...stats.by_day.flatMap((d) => [d.views, d.orders]));
   const onShop = items.filter((it) => it.live && it.image_url && it.price_display).slice(0, 6);
   const weekday = new Intl.DateTimeFormat(i18n.language === "hi" ? "hi-IN" : "en-IN", { weekday: "short" });
+  const lang = i18n.language === "hi" ? "hi" : "en";
 
   return (
     <Shell title={t("home.title")} board={board}>
@@ -150,6 +156,15 @@ export function Home() {
           <Icon name="videos" />
           <span className="grow">{t("home.processing")}</span>
           <Icon name="next" />
+        </Link>
+      ) : null}
+      {offer ? (
+        <Link className="notice calm" to="/offers">
+          <Icon name="tag" />
+          <span className="grow">
+            {t("home.offer_on", { title: offerTitle(offer, lang), date: formatOfferDay(offer.ends_on, lang) })}
+          </span>
+          <span className="btn small">{t("home.tell_customers")}</span>
         </Link>
       ) : null}
 

@@ -243,7 +243,7 @@ function Receipt() {
 const FEATURES: [string, IconName][] = [
   ["record", "record"], ["found", "items"], ["photos", "camera"], ["questions", "alert"],
   ["page", "store"], ["orders", "chat"], ["book", "orders"], ["stock", "sections"],
-  ["feed", "download"], ["share", "qr"], ["lang", "lang"], ["privacy", "shield"],
+  ["feed", "download"], ["offers", "tag"], ["lang", "lang"], ["privacy", "shield"],
 ];
 const HERO_FACTS: [string, IconName][] = [["whatsapp", "chat"], ["lang", "lang"], ["approve", "shield"]];
 
@@ -306,6 +306,7 @@ export function Landing() {
               <li>{t("landing.wa.step_2")}</li>
               <li>{t("landing.wa.step_3")}</li>
             </ol>
+            <p className="wa-offers"><Icon name="tag" size={20} />{t("landing.wa.offers")}</p>
             <p className="muted">{t("landing.wa.catalog")}</p>
           </div>
           <WhatsAppChat />

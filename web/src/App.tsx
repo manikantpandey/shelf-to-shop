@@ -6,6 +6,7 @@ import { Home } from "./screens/Home";
 import { Items } from "./screens/Items";
 import { Landing } from "./screens/Landing";
 import { More } from "./screens/More";
+import { Offers } from "./screens/Offers";
 import { Orders } from "./screens/Orders";
 import { Processing } from "./screens/Processing";
 import { PublicShop } from "./screens/PublicShop";
@@ -37,6 +38,7 @@ const SELLER: [string, ReactElement][] = [
   ["/home", <Home />],
   ["/orders", <Orders />],
   ["/items", <Items />],
+  ["/offers", <Offers />],
   ["/videos", <Videos />],
   ["/videos/:jobId", <VideoDetail />],
   ["/record", <Record />],

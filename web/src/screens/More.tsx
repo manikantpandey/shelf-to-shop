@@ -5,6 +5,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { Shell } from "../Shell";
 
 const LINKS: { to: string; icon: IconName; key: string }[] = [
+  { to: "/offers", icon: "tag", key: "offers" },
   { to: "/videos", icon: "videos", key: "videos" },
   { to: "/shop", icon: "store", key: "shop" },
   { to: "/sections", icon: "sections", key: "sections" },

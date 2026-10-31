@@ -15,6 +15,7 @@ const SIDE: Place[] = [
   { to: "/home", key: "nav.home", icon: "home" },
   { to: "/orders", key: "nav.orders", icon: "orders" },
   { to: "/items", key: "nav.items", icon: "items" },
+  { to: "/offers", key: "nav.offers", icon: "tag" },
   { to: "/videos", key: "nav.videos", icon: "videos" },
   { to: "/shop", key: "nav.shop", icon: "store" },
   { to: "/share", key: "nav.share", icon: "qr" },

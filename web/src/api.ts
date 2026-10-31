@@ -128,6 +128,10 @@ export type PublicProduct = {
   image_credit_url: string | null;
   order_link_en: string;
   order_link_hi: string;
+  on_offer: boolean;
+  /** The shop's own price before the running offer (null when not on offer). */
+  was_inr: number | null;
+  was_display: string | null;
 };
 
 export type Profile = {
@@ -150,7 +154,34 @@ export type PublicShop = {
   products: PublicProduct[];
   profile: Profile;
   sections: ShopSection[];
+  offer: PublicOffer | null;
 };
+
+// --- Offers: a sale the seller runs until a date ------------------------------------------
+export type OfferKind = "diwali" | "festival" | "weekend" | "new_stock" | "clearance" | "custom";
+export type OfferScope = "all" | "section" | "items";
+
+export type Offer = {
+  id: string;
+  kind: OfferKind;
+  title_en: string;
+  title_hi: string | null;
+  /** 1..90; null means an announcement only, prices unchanged. */
+  percent_off: number | null;
+  scope: OfferScope;
+  section_id: string | null;
+  item_ids: string[];
+  items_count: number;
+  /** "YYYY-MM-DD", the last day of the offer (inclusive). */
+  ends_on: string;
+  started_at: string;
+  ended_at: string | null;
+  active: boolean;
+};
+
+export type Offers = { active: Offer | null; past: Offer[]; shop_url: string | null };
+export type OfferSaved = { offer: Offer; shop_version: number | null };
+export type PublicOffer = { title_en: string; title_hi: string | null; percent_off: number | null; ends_on: string };
 
 export type OrderLine = { id: string; title: string; qty: number; price_inr: number };
 
@@ -211,6 +242,7 @@ export type Item = {
   image_credit: string | null;
   ai_background: boolean;
   added_at: string;
+  on_offer: boolean;
 };
 
 export type ItemSaved = { item: Item; shop_version: number | null };

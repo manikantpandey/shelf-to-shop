@@ -66,6 +66,7 @@ export function ItemTile({ item, onOpen, selecting, selected, onSelect, onQuick 
         <span className="body">
           <span className="name">{title}</span>
           <span className={item.published && !item.live && !item.hidden ? "meta warn" : "meta"}>
+            {item.on_offer ? <span className="offer-mark">{t("items.on_offer")}</span> : null}
             {state}
             {item.mrp_inr && item.price_inr !== null && item.mrp_inr > item.price_inr ? <span className="mrp">{formatINR(item.mrp_inr)}</span> : null}
           </span>

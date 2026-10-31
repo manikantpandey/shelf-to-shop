@@ -7,6 +7,7 @@ import { Icon } from "../components/Icon";
 import { Signboard } from "../components/Signboard";
 import { formatINR } from "../format";
 import { setLanguage } from "../i18n";
+import { formatOfferDay, offerTitle } from "../offers";
 
 type Basket = Record<string, number>;
 const counted = new Set<string>();
@@ -94,39 +95,51 @@ function AddButton({ product, qty, onChange, hindi, fresh = false }: {
   );
 }
 
+/** The struck-through price: during an offer the shop's own old price, otherwise the printed MRP. */
+function struck(product: PublicProduct): string | null {
+  return product.on_offer && product.was_display ? product.was_display : product.mrp_display;
+}
+
 function Price({ product, big = false }: { product: PublicProduct; big?: boolean }) {
   return (
     <span className="row" style={{ gap: 4 }}>
       <span className={big ? "pricetag lg" : "pricetag"}>{product.price_display}</span>
-      {product.mrp_display ? <span className="mrp">{product.mrp_display}</span> : null}
+      {struck(product) ? <span className="mrp">{struck(product)}</span> : null}
     </span>
   );
 }
 
-function Tile({ slug, product, hindi, qty, onQty, fresh }: {
+function Tile({ slug, product, hindi, qty, onQty, fresh, mark }: {
   slug: string;
   product: PublicProduct;
   hindi: boolean;
   qty: number;
   onQty: (n: number) => void;
   fresh: boolean;
+  /** What the offer pill says on items in the running offer ("10% off" or "Offer"). */
+  mark: string;
 }) {
   const { t } = useTranslation();
   const title = hindi ? product.title_hi : product.title_en;
   return (
     <article className={`tile${product.sold_out ? " soldout" : ""}`}>
-      <Link to={`/s/${slug}/p/${product.id}`} className="photo" aria-label={title}>
+      <Link to={`/s/${slug}/p/${product.id}`} className="photo" aria-label={product.on_offer ? `${title}, ${mark}` : title}>
         <img src={product.image_url} alt="" loading="lazy" width={512} height={512} />
         <span className="pricetag">{product.price_display}</span>
         {product.featured ? <span className="pin">{t("shop.popular")}</span> : null}
         {product.sold_out ? <span className="soldout-band">{t("shop.sold_out")}</span> : null}
+        {product.on_offer ? <span className="offer-mark">{mark}</span> : null}
       </Link>
       <div className="body">
         <h3 className="name">
           <Link to={`/s/${slug}/p/${product.id}`} style={{ color: "inherit", textDecoration: "none" }}>{title}</Link>
         </h3>
         <span className="meta">
-          {product.mrp_display ? <>{t("shop.mrp")} <s>{product.mrp_display}</s></> : product.ai_background ? t("shop.ai_label") : " "}
+          {product.on_offer && product.was_display ? (
+            <>{t("shop.was")} <s>{product.was_display}</s></>
+          ) : product.mrp_display ? (
+            <>{t("shop.mrp")} <s>{product.mrp_display}</s></>
+          ) : product.ai_background ? t("shop.ai_label") : " "}
         </span>
         <div className="tile-action">
           <AddButton product={product} qty={qty} onChange={onQty} hindi={hindi} fresh={fresh} />
@@ -319,9 +332,28 @@ export function PublicShop() {
   const count = Object.values(basket).reduce((a, b) => a + b, 0);
   const total = shop ? shop.products.reduce((sum, p) => sum + (basket[p.id] ? (p.price_paise / 100) * basket[p.id] : 0), 0) : 0;
   const profile = shop?.profile;
+  // The running offer, in the customer's language; its pill marks the items it covers.
+  const offer = shop?.offer ?? null;
+  const lang = hindi ? "hi" : "en";
+  const mark = offer?.percent_off ? t("shop.percent_off", { percent: offer.percent_off }) : t("shop.offer");
+  const banner = offer
+    ? offer.percent_off
+      ? t(shop?.products.length && shop.products.every((p) => p.on_offer) ? "shop.offer_all" : "shop.offer_some", {
+          title: offerTitle(offer, lang),
+          percent: offer.percent_off,
+          date: formatOfferDay(offer.ends_on, lang),
+        })
+      : t("shop.offer_plain", { title: offerTitle(offer, lang), date: formatOfferDay(offer.ends_on, lang) })
+    : "";
 
   return (
     <div className="shop">
+      {offer ? (
+        <p className="offer-banner">
+          <Icon name="tag" size={20} />
+          <span>{banner}</span>
+        </p>
+      ) : null}
       {profile?.notice ? <p className="notice-strip">{profile.notice}</p> : null}
       <header className="shop-head">
         <div className="brand">
@@ -355,6 +387,7 @@ export function PublicShop() {
             <article className="product">
               <div className="big">
                 <img src={product.image_url} alt={hindi ? product.title_hi : product.title_en} width={1024} height={1024} />
+                {product.on_offer ? <span className="offer-mark">{mark}</span> : null}
               </div>
               <div className="stack">
                 <h1 style={{ fontSize: "var(--t-24)" }}>{hindi ? product.title_hi : product.title_en}</h1>
@@ -380,7 +413,7 @@ export function PublicShop() {
                 <h2 id="more-h">{t("shop.more")}</h2>
                 <div className="tiles">
                   {others.map((p) => (
-                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} />
+                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} mark={mark} />
                   ))}
                 </div>
               </section>
@@ -413,7 +446,7 @@ export function PublicShop() {
                 </div>
                 <div className="tiles wide">
                   {list.map((p) => (
-                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} />
+                    <Tile key={p.id} slug={slug} product={p} hindi={hindi} qty={basket[p.id] ?? 0} onQty={(n) => change(p.id, n)} fresh={tapped} mark={mark} />
                   ))}
                 </div>
               </section>
