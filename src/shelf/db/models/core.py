@@ -9,7 +9,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shelf.db.base import Base, IdMixin, TimestampMixin
@@ -203,6 +203,47 @@ class Order(IdMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(12), default="new")
     paid: Mapped[bool] = mapped_column(default=False)
     lang: Mapped[str] = mapped_column(String(5), default="en")
+
+
+class Offer(IdMixin, TimestampMixin, Base):
+    """A sale the seller runs (Diwali sale, clearance) until a date; `created_at` is its start.
+
+    The prices it lowered are kept here, so ending it can put each one back.
+    """
+
+    __tablename__ = "offers"
+    __table_args__ = (
+        Index("ix_offers_workspace_created", "workspace_id", "created_at"),
+        # One running offer per shop, even when two starts arrive at once.
+        Index(
+            "uq_offers_running_workspace",
+            "workspace_id",
+            unique=True,
+            sqlite_where=text("ended_at IS NULL"),
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"))
+    # diwali | festival | weekend | new_stock | clearance | custom
+    kind: Mapped[str] = mapped_column(String(12))
+    title_en: Mapped[str] = mapped_column(String(80))
+    title_hi: Mapped[str | None] = mapped_column(String(80), default=None)
+    # None: an announcement only, prices unchanged.
+    percent_off: Mapped[int | None] = mapped_column(default=None)
+    # all | section | items
+    scope: Mapped[str] = mapped_column(String(10))
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sections.id", ondelete="SET NULL"), default=None
+    )
+    # Product ids the seller picked (scope "items").
+    item_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # {product id: {"price_inr", "mrp_inr", "offer_price_inr", "offer_mrp_inr"}}: before and
+    # after, for every item whose price the offer lowered.
+    changes: Mapped[dict[str, dict[str, int | None]]] = mapped_column(JSON, default=dict)
+    # Last day of the offer, India date, inclusive.
+    ends_on: Mapped[date]
+    ended_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class ShopCounter(IdMixin, Base):

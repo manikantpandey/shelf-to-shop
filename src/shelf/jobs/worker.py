@@ -100,8 +100,9 @@ def main() -> None:
         },
         lease_s=900,  # a pipeline run takes a few minutes
     )
-    # Deletes videos past each shop's retention period, abandoned uploads and old order details.
-    sweeper = Sweeper(factory, storage)
+    # Deletes videos past each shop's retention period, abandoned uploads and old order details,
+    # and ends offers past their last day.
+    sweeper = Sweeper(factory, storage, settings)
     sweeper.start()
     signal.signal(signal.SIGINT, worker.stop)
     signal.signal(signal.SIGTERM, worker.stop)

@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from engine.pipeline.publish import ShopInfo, ShopItem, publish_items
+from engine.prices.inr import format_inr
 from shelf.catalog.sections import ensure_sections
 from shelf.config import Settings
 from shelf.core.errors import AppError
-from shelf.db.models import AuditEvent, Catalog, Job, Product, Section, User, Workspace
+from shelf.db.models import AuditEvent, Catalog, Job, Offer, Product, Section, User, Workspace
 from shelf.jobs.service import open_flag_count
 from shelf.storage import LocalStorage
+
+# Videos whose items the seller sees in Items: still being checked, or already on the shop.
+SHOWN_STATUSES = ("needs_review", "published")
 
 
 def media_base(settings: Settings, slug: str, version: int) -> str:
@@ -24,6 +29,19 @@ def media_base(settings: Settings, slug: str, version: int) -> str:
 def item_id(slug: str, product: Product) -> str:
     """Retailer id for the feed and shop links: stable across republishes and videos."""
     return f"{slug}-{product.id.hex[-8:]}"
+
+
+def active_offer(db: Session, workspace_id: uuid.UUID) -> Offer | None:
+    """The shop's running offer; there is never more than one."""
+    return db.scalar(
+        select(Offer).where(Offer.workspace_id == workspace_id, Offer.ended_at.is_(None))
+    )
+
+
+def on_offer(offer: Offer | None, product: Product) -> bool:
+    """The running offer lowered this item's price, and the seller has not changed it since."""
+    change = offer.changes.get(str(product.id)) if offer is not None else None
+    return change is not None and product.price_inr == change["offer_price_inr"]
 
 
 def live_products(
@@ -141,8 +159,30 @@ def publish_shop(
     ]
     result = publish_items(shop, items, storage.path(folder_key))
     snapshot: dict[str, Any] = json.loads(result.catalog_json.read_text(encoding="utf-8"))
+    offer = active_offer(db, workspace.id)
+    # The price the shop charged before the offer (the MRP may be a higher printed price).
+    was: dict[str, int | None] = {
+        item_id(workspace.slug, r): offer.changes[str(r.id)]["price_inr"]
+        for r in rows
+        if offer is not None and on_offer(offer, r)
+    }
     for entry in snapshot["products"]:
         entry["image_url"] = f"{shop.media_base_url}/{entry.pop('image')}"
+        before = was.get(entry["id"])
+        entry["on_offer"] = entry["id"] in was
+        entry["was_inr"] = before
+        entry["was_display"] = format_inr(before * 100) if before is not None else None
+    # The sale running when this version was published, for the banner on the shop page.
+    snapshot["offer"] = (
+        {
+            "title_en": offer.title_en,
+            "title_hi": offer.title_hi,
+            "percent_off": offer.percent_off,
+            "ends_on": offer.ends_on.isoformat(),
+        }
+        if offer is not None
+        else None
+    )
     feed_meta = {
         "feed": result.feed_csv is not None,
         "feed_left_out": sorted({i.item_id for i in result.feed_errors}),

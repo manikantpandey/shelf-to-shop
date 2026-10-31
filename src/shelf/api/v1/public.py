@@ -69,13 +69,19 @@ def shop(slug: str, request: Request, db: SessionDep) -> dict[str, Any]:
     if ws is None or latest is None:
         raise AppError("not_found", "This shop has not published a catalog yet.", status=404)
     # Profile and section names are read live, so the seller's edits show at once.
-    used = {p.get("section") for p in latest.snapshot.get("products", [])}
+    products = latest.snapshot.get("products", [])
+    used = {p.get("section") for p in products}
     sections = db.scalars(
         select(Section).where(Section.workspace_id == ws.id).order_by(Section.position)
     ).all()
     return {
         "version": latest.version,
+        # Versions published before offers existed have no offer fields.
+        "offer": None,
         **latest.snapshot,
+        "products": [
+            {"on_offer": False, "was_inr": None, "was_display": None, **p} for p in products
+        ],
         "profile": profile_out(ws, request.app.state.settings.api_url),
         "sections": [
             {"id": str(s.id), "name_en": s.name_en, "name_hi": s.name_hi}

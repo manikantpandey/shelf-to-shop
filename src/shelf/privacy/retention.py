@@ -8,6 +8,7 @@ Runs every hour in the worker:
 - Uploads that never finished are deleted after a day.
 - Customer names and notes on orders are cleared after ORDER_DETAIL_DAYS; totals and items stay.
 - Ended sessions are removed a month after they end.
+Each run also ends offers past their last day (their prices go back; see shelf.catalog.offers).
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from typing import Any
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from shelf.catalog.offers import end_due_offers
+from shelf.config import Settings
 from shelf.core.logging import get_logger
 from shelf.db.models import Job, Order, SessionRow, Upload, Workspace
 from shelf.storage import LocalStorage
@@ -97,16 +100,20 @@ def sweep(db: Session, storage: LocalStorage, now: datetime | None = None) -> di
 
 
 class Sweeper:
-    """Runs `sweep` every hour on a background thread until stopped."""
+    """Runs `sweep` and ends due offers every hour on a background thread until stopped."""
 
-    def __init__(self, factory: sessionmaker[Session], storage: LocalStorage) -> None:
+    def __init__(
+        self, factory: sessionmaker[Session], storage: LocalStorage, settings: Settings
+    ) -> None:
         self.factory = factory
         self.storage = storage
+        self.settings = settings
         self._stop = threading.Event()
 
     def run_once(self) -> dict[str, Any]:
         with self.factory.begin() as db:
             counts = sweep(db, self.storage)
+        counts["offers"] = end_due_offers(self.factory, self.settings, self.storage)
         if any(counts.values()):
             log.info("retention_sweep", **counts)
         return counts

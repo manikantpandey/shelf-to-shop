@@ -36,14 +36,14 @@ from shelf.catalog.openfoodfacts import (
     thumb_size,
     valid_barcode,
 )
-from shelf.catalog.publish import item_id, publish_shop
+from shelf.catalog.publish import SHOWN_STATUSES, active_offer, item_id, on_offer, publish_shop
 from shelf.catalog.sections import category_for, ensure_sections
 from shelf.config import Settings
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.core.ids import uuid7
 from shelf.core.ratelimit import PHOTO_PER_SELLER, limiter
-from shelf.db.models import AuditEvent, FlagRow, Job, Product, Section, Upload
+from shelf.db.models import AuditEvent, FlagRow, Job, Offer, Product, Section, Upload
 from shelf.jobs.service import (
     TeeRunLog,
     providers_for,
@@ -56,7 +56,6 @@ from shelf.storage import LocalStorage
 router = APIRouter(tags=["items"])
 MOMENTS = 6
 MAX_PHOTO_UPLOAD = 12 * 1024 * 1024
-SHOWN_STATUSES = ("needs_review", "published")
 
 
 def _storage(request: Request) -> LocalStorage:
@@ -86,7 +85,8 @@ def _item(db: Session, seller: Seller, product_id: uuid.UUID) -> tuple[Product, 
     return row[0], row[1]
 
 
-def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
+def item_out(p: Product, job: Job, slug: str, offer: Offer | None) -> dict[str, Any]:
+    """One item for the seller; `offer` is the shop's running offer, if any."""
     version = int(p.updated_at.timestamp())
     on_shop = job.status == "published" and p.price_inr is not None and p.image_key is not None
     return {
@@ -100,6 +100,8 @@ def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
         "price_inr": p.price_inr,
         "price_display": format_inr(p.price_inr * 100) if p.price_inr is not None else None,
         "mrp_inr": p.mrp_inr,
+        # The running offer lowered this price (the old one is the MRP until it ends).
+        "on_offer": on_offer(offer, p),
         "sold_out": p.sold_out,
         "hidden": p.hidden,
         "featured": p.featured,
@@ -116,6 +118,13 @@ def item_out(p: Product, job: Job, slug: str) -> dict[str, Any]:
         "ai_background": p.ai_background,
         "added_at": iso_utc(p.created_at),
     }
+
+
+def _reply(
+    db: Session, seller: Seller, p: Product, job: Job, version: int | None
+) -> dict[str, Any]:
+    offer = active_offer(db, seller.workspace.id)
+    return {"item": item_out(p, job, seller.workspace.slug, offer), "shop_version": version}
 
 
 def _refresh_shop(
@@ -140,7 +149,8 @@ def list_items(seller: SellerDep, db: SessionDep) -> dict[str, Any]:
         )
         .order_by(Section.position, Product.featured.desc(), Job.created_at.desc(), Product.idx)
     ).all()
-    return {"items": [item_out(p, j, seller.workspace.slug) for p, j in rows]}
+    offer = active_offer(db, seller.workspace.id)
+    return {"items": [item_out(p, j, seller.workspace.slug, offer) for p, j in rows]}
 
 
 def _section(db: Session, seller: Seller, section_id: uuid.UUID | None) -> Section | None:
@@ -210,7 +220,7 @@ def edit_item(
             _close_flags(db, job, p)
     db.flush()
     version = _refresh_shop(db, settings, _storage(request), seller, job)
-    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": version}
+    return _reply(db, seller, p, job, version)
 
 
 BulkAction = Literal[
@@ -280,8 +290,9 @@ def bulk_edit(
     if any(job.status == "published" for _, job in rows):
         shop = publish_shop(db, settings, _storage(request), seller.workspace, seller.user)
         version = shop.version
+    offer = active_offer(db, seller.workspace.id)
     return {
-        "items": [item_out(p, job, seller.workspace.slug) for p, job in rows],
+        "items": [item_out(p, job, seller.workspace.slug, offer) for p, job in rows],
         "shop_version": version,
     }
 
@@ -357,7 +368,8 @@ def add_item(body: NewItem, seller: SellerDep, db: SessionDep) -> dict[str, Any]
         )
     )
     db.flush()
-    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": None}
+    # Items added after an offer started are not part of it.
+    return {"item": item_out(p, job, seller.workspace.slug, None), "shop_version": None}
 
 
 def _photo_key(job: Job, p: Product, kind: str) -> str:
@@ -418,7 +430,7 @@ async def upload_photo(
     storage = _storage(request)
     _set_photo(db, storage, seller, p, job, jpeg, "upload")
     version = _refresh_shop(db, settings, storage, seller, job)
-    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": version}
+    return _reply(db, seller, p, job, version)
 
 
 # --- A better moment from the same video ----------------------------------------------------
@@ -549,7 +561,7 @@ async def photo_from_moment(
     job.cost_usd = str(Decimal(job.cost_usd) + sum((e.cost_usd for e in log.entries), Decimal(0)))
     _set_photo(db, storage, seller, p, job, jpeg, "frame")
     version = _refresh_shop(db, settings, storage, seller, job)
-    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": version}
+    return _reply(db, seller, p, job, version)
 
 
 # --- Pack photos from Open Food Facts --------------------------------------------------------
@@ -618,4 +630,4 @@ async def photo_from_pack(
     storage = _storage(request)
     _set_photo(db, storage, seller, p, job, jpeg, "openfoodfacts", CREDIT, photo.page_url)
     version = _refresh_shop(db, settings, storage, seller, job)
-    return {"item": item_out(p, job, seller.workspace.slug), "shop_version": version}
+    return _reply(db, seller, p, job, version)

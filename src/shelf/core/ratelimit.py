@@ -31,6 +31,8 @@ EVENT_PER_IP = Limit("event-ip", 120, 60)
 SIGNIN_PER_IP = Limit("signin-ip", 20, 600)
 UPLOAD_PER_SELLER = Limit("upload-seller", 30, 3600)
 PHOTO_PER_SELLER = Limit("photo-seller", 120, 3600)
+# Starting or ending an offer republishes the whole shop.
+OFFER_PER_SELLER = Limit("offer-seller", 30, 3600)
 
 
 class RateLimiter:

@@ -1,8 +1,8 @@
 """The seller's own data: download all of it, or delete the shop and everything in it.
 
-The export is a zip with one JSON file (shop, profile, sections, items, orders, videos) and the
-current item photos. Deleting needs the shop's web name typed back, removes every row and file,
-and ends the session; only an audit line without personal data remains.
+The export is a zip with one JSON file (shop, profile, sections, items, orders, offers, videos)
+and the current item photos. Deleting needs the shop's web name typed back, removes every row and
+file, and ends the session; only an audit line without personal data remains.
 """
 
 from __future__ import annotations
@@ -24,12 +24,14 @@ from starlette.background import BackgroundTask
 from shelf.api.deps import SessionDep, SettingsDep
 from shelf.api.v1.shop import profile_out
 from shelf.auth.sessions import CSRF_COOKIE, SESSION_COOKIE, SellerDep
+from shelf.catalog.offers import offer_out
 from shelf.core.clock import iso_utc
 from shelf.core.errors import AppError
 from shelf.db.models import (
     AuditEvent,
     Catalog,
     Job,
+    Offer,
     Order,
     Product,
     Section,
@@ -77,6 +79,13 @@ def export_data(request: Request, seller: SellerDep, db: SessionDep) -> FileResp
              "customer_name": o.customer_name, "note": o.note, "items": o.items,
              "total_inr": o.total_inr, "status": o.status, "paid": o.paid}
             for o in db.scalars(select(Order).where(Order.workspace_id == ws.id))
+        ],
+        # Each offer with the prices it changed (before and during the offer).
+        "offers": [
+            {**offer_out(o), "price_changes": o.changes}
+            for o in db.scalars(
+                select(Offer).where(Offer.workspace_id == ws.id).order_by(Offer.created_at)
+            )
         ],
         "videos": [
             {"id": str(j.id), "created_at": iso_utc(j.created_at), "status": j.status,
@@ -129,7 +138,8 @@ def delete_everything(
     storage.delete(f"ws/{ws.id}")
     storage.delete(f"public/{ws.slug}")
     workspace_id = ws.id
-    # The user row owns the shop: deleting it removes the shop and every row that belongs to it.
+    # The user row owns the shop: deleting it removes the shop and every row that belongs to it
+    # (items, orders, offers...).
     db.delete(db.get(User, user.id))
     # Spend totals are keyed by a scope name, not a foreign key, so they go explicitly.
     db.execute(delete(SpendDay).where(SpendDay.scope == shop_scope(str(workspace_id))))

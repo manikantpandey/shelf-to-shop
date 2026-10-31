@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shelf.api.v1 import health, insights, items, privacy, public, seller, shop, uploads
+from shelf.api.v1 import health, insights, items, offers, privacy, public, seller, shop, uploads
 from shelf.catalog.openfoodfacts import OpenFoodFacts
 from shelf.config import Settings, get_settings
 from shelf.core.errors import install_error_handlers
@@ -43,7 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Dev convenience: process jobs in this process. Production runs `shelf.jobs.worker`.
             worker = Worker(app.state.session_factory, pipeline_handlers(app))
             threading.Thread(target=worker.run_forever, name="inline-worker", daemon=True).start()
-            sweeper = Sweeper(app.state.session_factory, app.state.storage)
+            sweeper = Sweeper(app.state.session_factory, app.state.storage, settings)
             sweeper.start()
         yield
         if worker is not None:
@@ -87,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(items.router, prefix=API_PREFIX)
     app.include_router(insights.router, prefix=API_PREFIX)
     app.include_router(shop.router, prefix=API_PREFIX)
+    app.include_router(offers.router, prefix=API_PREFIX)
     app.include_router(privacy.router, prefix=API_PREFIX)
     app.include_router(public.router, prefix=API_PREFIX)
 
