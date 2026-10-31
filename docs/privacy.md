@@ -36,7 +36,10 @@ The shop page never shows the seller's email, internal ids, videos, costs or pri
 | Meta Model API (Muse Spark, SAM 3.1, Muse Voice Transcribe, Muse Image) | The shelf video, its audio and frames, while a video is processed | Finding items, prices and photos. Contributor models that may train on content are refused; requests use `store: false`; uploaded files expire after one hour and are deleted after use |
 | Open Food Facts | Product names or barcodes the seller searches | Finding pack photos (no personal data is sent) |
 | WhatsApp (Meta) | The order message, sent by the customer from their own phone | The customer's choice to order; we never send messages ourselves |
-| AWS (Mumbai region) | Everything above, on the server | Hosting |
+| AWS (US East, N. Virginia: `us-east-1`) | Everything above, on the server | Hosting |
+
+The server is in the United States, so sellers' and customers' data is stored outside India. The DPDP Act
+allows transfers abroad unless the government restricts the destination country by notification.
 
 ## Seller rights
 

@@ -2,7 +2,7 @@
 
 How to deploy Shelf-to-Shop, operate it, rotate keys and handle an incident.
 
-Production shape: one EC2 machine in `ap-south-1` (Mumbai) running Docker Compose (`deploy/compose.prod.yml`):
+Production shape: one EC2 machine in `us-east-1` (N. Virginia) running Docker Compose (`deploy/compose.prod.yml`):
 Caddy (HTTPS, web app, security headers) → API → Postgres, plus a worker that runs the AI pipeline.
 Secrets live in AWS Systems Manager Parameter Store; the machine reads them at boot. No SSH port is open;
 you get a shell through Session Manager in the AWS console.
@@ -10,7 +10,7 @@ you get a shell through Session Manager in the AWS console.
 ## 1. First deploy
 
 ### 1.1 Secrets (once, about 5 minutes)
-AWS console → region **Asia Pacific (Mumbai)** → **Systems Manager → Parameter Store → Create parameter**.
+AWS console → region **US East (N. Virginia)** → **Systems Manager → Parameter Store → Create parameter**.
 Create each of these as type **SecureString** (default KMS key):
 
 | Name | Value |
@@ -30,7 +30,8 @@ Never paste these anywhere else (chat, tickets, the repo).
 4. Tick **I acknowledge that AWS CloudFormation might create IAM resources** (the machine's role) and create.
 5. When the stack shows `CREATE_COMPLETE`, open **Outputs** and copy **ElasticIp**.
 
-The template needs the account's default VPC in Mumbai (present unless someone deleted it).
+The template needs the account's default VPC in the region (present unless someone deleted it). The plan
+was Mumbai; on Nov 1, 2026 the owner chose us-east-1. The template works in either: only `--region` changes.
 
 ### 1.3 DNS (2 minutes)
 GoDaddy → **My Products → shankhyaai.com → DNS → Add New Record**: type **A**, name **shop**, value =
@@ -104,7 +105,7 @@ in Parameter Store as a String and rerun bootstrap ([section 3](#3-rotating-keys
 
 Rerun bootstrap (rewrites `deploy/.env` from Parameter Store and restarts):
 ```sh
-sudo /opt/shelf/deploy/bootstrap.sh shop.shankhyaai.com YOUR_ACME_EMAIL /shelf-to-shop/ ap-south-1
+sudo /opt/shelf/deploy/bootstrap.sh shop.shankhyaai.com YOUR_ACME_EMAIL /shelf-to-shop/ us-east-1
 ```
 
 ## 4. Incidents
