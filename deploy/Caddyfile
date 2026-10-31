@@ -1,5 +1,7 @@
 {
 	email {$ACME_EMAIL}
+	# Let's Encrypt only: the owner agreed to share the contact email with it, not with fallback CAs.
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
 }
 
 {$SITE_HOST} {
