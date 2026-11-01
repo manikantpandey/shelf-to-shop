@@ -18,10 +18,18 @@ export async function qrDataUrl(url: string, width = 600): Promise<string> {
   return QRCode.toDataURL(url, { margin: 1, width, color: { dark: INK, light: "#ffffff" } });
 }
 
+/** A base64 data: address as a Blob, decoded here: the site's CSP (connect-src 'self') stops fetch() reading it. */
+export function dataUrlBlob(src: string): Blob {
+  const [head, body = ""] = src.split(",", 2);
+  const type = head.slice("data:".length).split(";")[0] || "application/octet-stream";
+  const bytes = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type });
+}
+
 async function loadImage(src: string): Promise<ImageBitmap> {
-  // Fetched as data, so the picture never taints the canvas (it can then be saved).
-  const res = await fetch(src);
-  return createImageBitmap(await res.blob());
+  // Read as data, so the picture never taints the canvas (it can then be saved).
+  const blob = src.startsWith("data:") ? dataUrlBlob(src) : await (await fetch(src)).blob();
+  return createImageBitmap(blob);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {

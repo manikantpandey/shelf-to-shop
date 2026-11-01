@@ -107,6 +107,19 @@ for (const [size, viewport] of Object.entries(SIZES)) {
   await page.getByText(/Found \d+ items/).waitFor();
   await shot("review", true);
 
+  // Offers: a Diwali sale as the shopkeeper runs it, and the shop page as a customer then sees it.
+  await page.goto(`${WEB}/offers`);
+  await page.getByText("Diwali", { exact: true }).click();
+  await page.getByText("25%", { exact: true }).click();
+  await page.getByRole("button", { name: "Start offer" }).click();
+  await page.getByRole("link", { name: "Tell customers on WhatsApp" }).waitFor();
+  await shot("offers", true);
+  const customer = await context.newPage();
+  await customer.goto(shopLink);
+  await customer.locator(".tile img").first().waitFor();
+  await shotOf(customer)("shop-offer");
+  await customer.close();
+
   await context.close();
 }
 
