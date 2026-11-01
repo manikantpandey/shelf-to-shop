@@ -30,6 +30,8 @@ for engine/shelf/web code.
   (`@` -> 216.198.79.1, `www` CNAME) is untouched and still answers.
 - Caddy got a Let's Encrypt certificate (issuer YE2, valid until 30 Jan 2027);
   `/api/v1/health/ready` returns 200 over normal DNS.
+- Meta domain verification: `shankhyaai.com` is **Verified** in business "ShankhySecure" (domain ID
+  1131556566360418) via a GoDaddy TXT record at `@`. Keep that TXT record; Meta re-checks it.
 
 ### Next 3 tasks
 1. Feed test: upload the CSV to Commerce Manager now that Meta can fetch `link`/`image_link` from the domain.
@@ -67,6 +69,10 @@ for engine/shelf/web code.
   with the old price shown as "Was", a banner and "25% off" marks on the shop page, back to normal when it
   ends (by hand or automatically). "Tell customers on WhatsApp" opens WhatsApp with the message ready.
   New table `offers` (migration `4cc4fb15cb81`), 11 server tests, 19 web tests.
+- **Meta catalog by link**: each shop's catalog file is also at a public address
+  (`/api/v1/public/shops/<slug>/feed.csv`, only what the shop page shows); Home shows it with Copy.
+  Added once in Commerce Manager as an hourly scheduled feed, Meta keeps the catalog in sync by itself
+  (Meta's Feed API: scheduled feeds fetch at most hourly). An API push needs a Meta app and token: later.
 - **docs/integration/phoenix.md**: the SocialPulse/Phoenix tool API as a design doc (manifest, keys and
   signing, webhooks, review link, sinks, error codes, worked example, verifier code with test vectors).
 
