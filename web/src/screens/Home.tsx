@@ -34,9 +34,8 @@ export function DemoPath({ stats, videos, url, onHide }: {
   };
   const go = {
     fix: toCheck ? (
-      <Link className="btn small primary" to={`/jobs/${toCheck.id}/review`}>
-        {toCheck.open_flags ? t("home.check") : t("home.review")}
-      </Link>
+      // "Check", not "Fix prices": Home knows how many questions there are, not whether they are about prices.
+      <Link className="btn small primary" to={`/jobs/${toCheck.id}/review`}>{t("home.review")}</Link>
     ) : null,
     read: read ? <Link className="btn small" to={`/videos/${read.id}`}>{t("path.read_go")}</Link> : null,
     order: url ? <a className="btn small" href={url} target="_blank" rel="noopener">{t("home.open_shop")}</a> : null,

@@ -16,9 +16,10 @@ question ("Is this ₹4 or ₹5?") instead of guessing.
 
 <p>
 <img src="docs/screenshots/landing-phone.jpg" width="200" alt="The front door: headline, the two ways in, and the demo phone at the record step">
-<img src="docs/screenshots/home-phone.jpg" width="200" alt="Home: today's orders, items and the last video">
+<img src="docs/screenshots/home-phone.jpg" width="200" alt="Home: new orders, the four-step demo path and the shop">
+<img src="docs/screenshots/offers-phone.jpg" width="200" alt="Offers: a Diwali sale running, with the WhatsApp message for customers">
+<img src="docs/screenshots/shop-offer-phone.jpg" width="200" alt="The shop page during the sale: banner, 25% off marks and the old price">
 <img src="docs/screenshots/review-phone.jpg" width="200" alt="Review: items found in the video with their price tags and questions">
-<img src="docs/screenshots/shop-phone.jpg" width="200" alt="The public shop page a customer opens">
 <img src="docs/screenshots/basket-phone.jpg" width="200" alt="A customer's basket, sent as one WhatsApp order">
 </p>
 

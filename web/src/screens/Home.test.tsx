@@ -29,7 +29,7 @@ afterEach(() => {
 describe("demo path", () => {
   it("links each open step to where it is done, and ticks the rest", () => {
     path(stats({ new: 1 }), [{ ...video("v3", "needs_review"), open_flags: 2 }, video("v1", "published")]);
-    expect(screen.getByRole("link", { name: "Fix prices" }).getAttribute("href")).toBe("/jobs/v3/review");
+    expect(screen.getByRole("link", { name: "Check" }).getAttribute("href")).toBe("/jobs/v3/review");
     expect(screen.getByRole("link", { name: "Open the video" }).getAttribute("href")).toBe("/videos/v1");
     expect(screen.getByRole("link", { name: "See orders" }).getAttribute("href")).toBe("/orders");
     expect(screen.getAllByText("Done")).toHaveLength(1); // the order was sent
@@ -44,7 +44,7 @@ describe("demo path", () => {
     expect(screen.getByRole("link", { name: "Record" }).getAttribute("href")).toBe("/record");
   });
 
-  it("offers Check instead of Fix prices when the newest video has no questions", () => {
+  it("says Check whatever the questions are about, since Home only knows how many there are", () => {
     path(stats({}), [{ ...video("v3", "needs_review"), open_flags: 0 }]);
     expect(screen.queryByRole("link", { name: "Fix prices" })).toBeNull();
     expect(screen.getByRole("link", { name: "Check" }).getAttribute("href")).toBe("/jobs/v3/review");
