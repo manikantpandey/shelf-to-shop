@@ -216,7 +216,9 @@
     "tell_customers": "ग्राहकों को बताएँ",
     "sales_today_one": "आज की बिक्री ({{count}} ऑर्डर)",
     "sales_today_other": "आज की बिक्री ({{count}} ऑर्डर)",
-    "your_shop": "आपकी दुकान"
+    "your_shop": "आपकी दुकान",
+    "feed_link_title": "Meta Commerce Manager के लिए लिंक",
+    "feed_link_hint": "इसे एक बार शेड्यूल्ड डेटा फ़ीड (हर घंटे) के रूप में जोड़ें। फिर Meta आपका Instagram और WhatsApp कैटलॉग अपने आप अपडेट रखेगा।"
   },
   "path": {
     "title": "सैंपल दुकान को चार कदमों में आज़माएँ",

@@ -947,3 +947,8 @@ textarea.input { min-height: 88px; padding: var(--s-12); resize: vertical; font:
 /* Front door: the line about offers under the WhatsApp steps. */
 .wa-offers { display: flex; align-items: flex-start; gap: var(--s-8); font-weight: 600; }
 .wa-offers svg { flex: 0 0 auto; margin-top: 3px; color: var(--board); }
+
+/* Home: the public catalog-file link for a scheduled feed in Commerce Manager. */
+.feed-link { display: grid; gap: var(--s-4); padding-top: var(--s-12); border-top: 1px dashed var(--line); }
+.feed-url { flex: 1 1 14em; min-width: 0; padding: var(--s-8); border-radius: var(--r-input); background: var(--ground);
+  font-size: var(--t-13); overflow-wrap: anywhere; }

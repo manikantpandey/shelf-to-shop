@@ -18,7 +18,14 @@ from shelf.api.deps import SessionDep
 from shelf.api.v1.insights import shop_today
 from shelf.api.v1.shop import profile_out
 from shelf.core.errors import AppError
-from shelf.core.ratelimit import EVENT_PER_IP, ORDER_PER_IP, ORDER_PER_SHOP, client_ip, limiter
+from shelf.core.ratelimit import (
+    EVENT_PER_IP,
+    FEED_PER_IP,
+    ORDER_PER_IP,
+    ORDER_PER_SHOP,
+    client_ip,
+    limiter,
+)
 from shelf.db.models import Catalog, Order, Section, ShopCounter, Workspace
 from shelf.storage import LocalStorage
 
@@ -107,6 +114,23 @@ def media(slug: str, version: int, file: str, request: Request, db: SessionDep) 
         raise AppError("not_found", "Photo not found.", status=404)
     return FileResponse(
         path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400, immutable"}
+    )
+
+
+@router.get("/shops/{slug}/feed.csv")
+def feed(slug: str, request: Request, db: SessionDep) -> FileResponse:
+    """The shop's Meta catalog file, for Commerce Manager to fetch as a scheduled feed. It holds
+    only what the published shop page already shows."""
+    limiter(request).hit(FEED_PER_IP, client_ip(request))
+    ws = _shop(db, slug)
+    latest = _latest(db, ws) if ws is not None else None
+    storage: LocalStorage = request.app.state.storage
+    folder = storage.path(latest.folder_key) if latest is not None else None
+    path = folder / "meta_catalog_feed.csv" if folder is not None else None
+    if path is None or not path.exists():
+        raise AppError("not_found", "This shop has no catalog file.", status=404)
+    return FileResponse(
+        path, media_type="text/csv", headers={"Cache-Control": "public, max-age=300"}
     )
 
 

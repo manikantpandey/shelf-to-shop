@@ -28,6 +28,8 @@ class Limit:
 ORDER_PER_IP = Limit("order-ip", 10, 600)
 ORDER_PER_SHOP = Limit("order-shop", 120, 3600)
 EVENT_PER_IP = Limit("event-ip", 120, 60)
+# Commerce Manager fetches a scheduled feed at most hourly; this leaves room for retries.
+FEED_PER_IP = Limit("feed-ip", 120, 3600)
 SIGNIN_PER_IP = Limit("signin-ip", 20, 600)
 UPLOAD_PER_SELLER = Limit("upload-seller", 30, 3600)
 PHOTO_PER_SELLER = Limit("photo-seller", 120, 3600)

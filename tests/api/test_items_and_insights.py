@@ -275,3 +275,22 @@ def test_demo_sign_in_gets_a_private_copy_of_the_sample_shop(
         assert len(_shop(b, slug_b)["products"]) == 2
     with app.state.session_factory() as db:
         assert db.scalar(select(Workspace).where(Workspace.slug == "sample-kirana")).is_template
+
+
+def test_meta_can_fetch_the_catalog_file_from_a_public_link(
+    app_and_client: tuple[Any, TestClient], clip: bytes
+) -> None:
+    app, c = app_and_client
+    h = _signin(c)
+    assert c.get("/api/v1/public/shops/gupta-store/feed.csv").status_code == 404  # not published
+    _published_video(app, c, h, clip)
+    link = c.get("/api/v1/catalog").json()["feed_link"]
+    assert link.endswith("/api/v1/public/shops/gupta-store/feed.csv")
+    seller_copy = c.get("/api/v1/catalog/feed.csv").text
+
+    c.cookies.clear()  # Commerce Manager has no sign-in
+    public = c.get("/api/v1/public/shops/gupta-store/feed.csv")
+    assert public.status_code == 200, public.text
+    assert public.headers["content-type"].startswith("text/csv")
+    assert public.text == seller_copy
+    assert c.get("/api/v1/public/shops/nobody-here/feed.csv").status_code == 404

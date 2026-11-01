@@ -214,6 +214,8 @@ export type MyCatalog =
       url: string;
       published_at: string;
       feed_url: string | null;
+      /** Public address of the same file, for a scheduled feed in Commerce Manager. */
+      feed_link: string | null;
       feed_left_out: number;
       photos_url: string;
     };

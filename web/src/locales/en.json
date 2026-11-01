@@ -216,7 +216,9 @@
     "tell_customers": "Tell customers",
     "sales_today_one": "Sales today ({{count}} order)",
     "sales_today_other": "Sales today ({{count}} orders)",
-    "your_shop": "Your shop"
+    "your_shop": "Your shop",
+    "feed_link_title": "Link for Meta Commerce Manager",
+    "feed_link_hint": "Add it once as a scheduled data feed (hourly). Meta then keeps your Instagram and WhatsApp catalog up to date by itself."
   },
   "path": {
     "title": "Try the sample shop in four steps",

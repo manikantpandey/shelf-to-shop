@@ -79,6 +79,7 @@ export function Home() {
   const [offer, setOffer] = useState<Offer | null>(null);
   const [path, setPath] = useState(showPath);
   const [copied, setCopied] = useState(false);
+  const [copiedFeed, setCopiedFeed] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -112,6 +113,15 @@ export function Home() {
 
   const url = catalog.published ? catalog.url : null;
   const share = url ? `https://wa.me/?text=${encodeURIComponent(t("home.share_text", { url }))}` : "";
+  const copyFeed = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedFeed(true);
+      window.setTimeout(() => setCopiedFeed(false), 2000);
+    } catch {
+      setCopiedFeed(false);
+    }
+  };
   const copy = async () => {
     if (!url) return;
     try {
@@ -211,6 +221,19 @@ export function Home() {
               <Link className="btn small quiet" to="/share"><Icon name="qr" size={18} />{t("nav.share")}</Link>
             </div>
             {catalog.published && !catalog.feed_url ? <p className="muted small">{t("home.feed_unavailable")}</p> : null}
+            {catalog.published && catalog.feed_link ? (
+              <div className="feed-link">
+                <p className="small"><strong>{t("home.feed_link_title")}</strong></p>
+                <div className="row">
+                  <code className="feed-url">{catalog.feed_link}</code>
+                  <button type="button" className="btn small" onClick={() => void copyFeed(catalog.feed_link ?? "")}>
+                    <Icon name={copiedFeed ? "check" : "copy"} size={18} />
+                    {copiedFeed ? t("home.copied") : t("home.copy")}
+                  </button>
+                </div>
+                <p className="muted small">{t("home.feed_link_hint")}</p>
+              </div>
+            ) : null}
           </>
         ) : (
           <p className="muted">{t("home.not_live")}</p>

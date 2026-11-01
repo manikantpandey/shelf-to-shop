@@ -541,6 +541,10 @@ def my_catalog(
         "items": len(latest.snapshot.get("products", [])),
         "url": f"{settings.public_base_url}/s/{seller.workspace.slug}",
         "feed_url": "/api/v1/catalog/feed.csv" if report.get("feed", True) else None,
+        # The same file at a public address, for a scheduled feed in Commerce Manager.
+        "feed_link": f"{settings.api_url}/api/v1/public/shops/{seller.workspace.slug}/feed.csv"
+        if report.get("feed", True)
+        else None,
         "feed_left_out": len(report.get("feed_left_out", [])),
         "feed_reasons": report.get("feed_reasons", []),
         "photos_url": "/api/v1/catalog/photos.zip",
