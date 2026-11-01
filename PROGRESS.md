@@ -73,6 +73,10 @@ for engine/shelf/web code.
   (`/api/v1/public/shops/<slug>/feed.csv`, only what the shop page shows); Home shows it with Copy.
   Added once in Commerce Manager as an hourly scheduled feed, Meta keeps the catalog in sync by itself
   (Meta's Feed API: scheduled feeds fetch at most hourly). An API push needs a Meta app and token: later.
+- **Fixed on the live site**: the WhatsApp Status picture did nothing in production (the CSP blocks
+  fetch() on data: addresses; local dev has no CSP). A sweep of every live screen now shows no console
+  errors. Screenshots re-shot from the live site; `docs/demo-script.md` (3-minute video shot list) and
+  `docs/submission.md` (form text) written.
 - **docs/integration/phoenix.md**: the SocialPulse/Phoenix tool API as a design doc (manifest, keys and
   signing, webhooks, review link, sinks, error codes, worked example, verifier code with test vectors).
 
