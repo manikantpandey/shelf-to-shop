@@ -84,8 +84,9 @@ for engine/shelf/web code.
 - Two weak photos in this seed: the sliced bread loaf (a crumpled scrap) and the toffee jar (a blob). Every
   demo copy shows them on the shop page. Fix: re-seed (about $0.30, random), or hide those two items in the
   sample shop.
-- The newest video's question is about a photo (Pepsi), not a price; a clip where you say a price above the
-  printed one would add a "Fix prices" moment.
+- The newest video's question is about a photo (Pepsi), not a price. For a price question, film a clip
+  where one item's price is not said: Review then asks for it. (Not a price above the printed MRP: selling
+  packaged goods above MRP is not allowed in India, so it must never be staged; the app does flag it.)
 - Cost while it runs: about $30-35 a month (t3.medium, disk, public IPv4) plus about $0.10 per video
   processed. Tear down after the event: runbook section 5.
 
@@ -135,8 +136,8 @@ Recent). What was taken from each and what was left out is in `docs/design-plan.
 
 ### Broken / risks
 - **The demo's "Fix prices" moment depends on the model run.** For a question every time, shoot a 20 s
-  clip where you say a price above the printed one (say "chheh rupaye" for a ₹5 pack) and use it as the
-  sample shop's third video.
+  clip where one item's price is deliberately not said (Review asks for it) and use it as the sample shop's
+  third video. Corrected Nov 2: never stage a price above the printed MRP; that is not allowed in India.
 - Photos vary between seeding runs too (this run cut the Nut Cracker pack down to the printed peanuts);
   runbook 1.4 step 4 now says to check every sample photo after seeding.
 - Shop links share the generic preview; a per-shop preview needs a server-rendered page (plan, open
@@ -196,7 +197,7 @@ Recent). What was taken from each and what was left out is in `docs/design-plan.
 - The eval set is 4 short clips, and the fixes were made on the same clips: a check, not a held-out test.
   On-screen times in the real clips' labels came from a detection run, so recall there is optimistic.
 - Fewer questions also means the sample shop's third clip may arrive with nothing to fix; the demo of
-  "Fix prices" may need a clip where the seller really says a price above the printed one.
+  "Fix prices" may need a clip where one item's price is not said (see Session 11 for why not above MRP).
 - Hindi numbers cut at a pause ("ek hazaar do" without "sau") are read as 1002; caught here only because
   the video model disagreed.
 
