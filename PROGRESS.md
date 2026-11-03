@@ -22,6 +22,27 @@ for engine/shelf/web code.
 
 ---
 
+## Nov 3: demo film finished
+
+- **"Price kya hai?"**, 2:59 at 1080p: `D:\film\price-kya-hai.mp4` (outside the repo; it shows real people,
+  never commit it). Approved by you. Filmed at Mayar Super Store; the woman recording the shelf has her
+  face blurred throughout (detector plus hand-placed boxes for side views); your clip is unblurred.
+  Narration is an AI voice (Gemini), credited on the end card. Music: "Inspirational Advertising 1" by
+  David Fesliyan, joined to itself at a break. Customer order and Diwali sale are screen recordings of a
+  sample-shop copy on the live site, labelled as such. Ends on SocialPulse as it is today (your
+  screenshots; one client name blurred) and the plan, labelled "Coming next".
+- Rebuild or change it: `D:\film\work\scripts\README.txt` (`python build.py final`).
+- Fixed on the live site on the way: Mayar Super Store's mixed-nuts jar had a black photo (failed
+  cut-out); it is now a square crop from her own video, republished as shop version 2.
+- Form answers: in the conversation, longer version in `docs/submission.md`.
+
+### Next 3 tasks
+1. Upload the film to YouTube and paste the link into the form (and into the README).
+2. Submit the form before the 4 PM IST freeze on Nov 4.
+3. After the event: tear down the AWS stack (runbook section 5) unless you keep it running.
+
+---
+
 ## Nov 1: production is live at https://shop.shankhyaai.com
 
 - CloudFormation stack `shelf-to-shop` in **us-east-1** (not Mumbai), `CREATE_COMPLETE` 22:10 UTC Oct 31.
