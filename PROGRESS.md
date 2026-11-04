@@ -39,7 +39,8 @@ for engine/shelf/web code.
 ### Next 3 tasks
 1. Done: form submitted Nov 4, before the freeze (film: https://youtu.be/tNfLxnYcrtE).
 2. Keep the live site up while judging runs; no code changes after the 4 PM IST freeze.
-3. After the event: tear down the AWS stack (runbook section 5) unless you keep it running.
+3. Hosting: the stack stays up after the event for Mayar Super Store and the demo (your decision, Nov 4).
+   Not set up yet: database backups and an AWS cost alert.
 
 ---
 
