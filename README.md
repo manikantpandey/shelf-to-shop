@@ -3,6 +3,9 @@
 **Live demo: https://shop.shankhyaai.com** ("Try the sample shop" opens a private copy of a kirana shop
 made from three real shelf videos).
 
+**3-minute film: https://youtu.be/tNfLxnYcrtE** ("Price kya hai?", filmed at Mayar Super Store, a real
+kirana and dry-fruit shop using Shelf-to-Shop).
+
 A shopkeeper films the shelf for under a minute, saying prices out loud ("ye neela wala 1200, cotton
 wala 850"). Shelf-to-Shop turns that video into a shop that takes orders:
 

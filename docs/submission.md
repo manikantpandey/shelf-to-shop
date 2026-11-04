@@ -9,7 +9,7 @@ Meta Global AI Developer Hackathon, Startup track. Copy the parts the form asks 
 **Links**
 - Live demo: https://shop.shankhyaai.com ("Try the sample shop" opens a private copy)
 - Source (Apache-2.0): https://github.com/manikantpandey/shelf-to-shop
-- Demo video: (add the link)
+- Demo video: https://youtu.be/tNfLxnYcrtE
 
 ## The problem
 

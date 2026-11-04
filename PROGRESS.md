@@ -37,8 +37,8 @@ for engine/shelf/web code.
 - Form answers: in the conversation, longer version in `docs/submission.md`.
 
 ### Next 3 tasks
-1. Upload the film to YouTube and paste the link into the form (and into the README).
-2. Submit the form before the 4 PM IST freeze on Nov 4.
+1. Submit the form before the 4 PM IST freeze on Nov 4 (film: https://youtu.be/tNfLxnYcrtE, now in the README).
+2. Keep the live site up while judging runs.
 3. After the event: tear down the AWS stack (runbook section 5) unless you keep it running.
 
 ---
