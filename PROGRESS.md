@@ -22,6 +22,26 @@ for engine/shelf/web code.
 
 ---
 
+## Nov 28: taken off AWS
+
+- At your request the live site is down. The CloudFormation stack `shelf-to-shop` (us-east-1) is deleted:
+  server terminated, its disk and the Elastic IP released, role and security group gone. The three
+  Parameter Store secrets under `/shelf-to-shop/` are deleted too. AWS cost for this project is now $0.
+- Backup made first and checked: `D:\shelf-to-shop-backup` (outside the repo; contains personal data,
+  never commit it). Database dump restored cleanly into a fresh Postgres 16 (29 shops, 406 items,
+  9 orders; Mayar Super Store's 9 items), 5,498 media files, checksums OK. Restore steps are in its
+  README.txt. The temporary S3 bucket used to carry it was deleted after the download.
+- Still to do, by you: delete the GoDaddy `shop` A record (it points at 54.156.251.160, an IP AWS can
+  give to someone else); remove or pause the scheduled feed in Commerce Manager ("Shelf-to-Shop test"),
+  which will now fail every hour. README's live-demo link is now dead.
+
+### Next 3 tasks
+1. You: delete the GoDaddy `shop` record.
+2. You: remove the Commerce Manager data source that fetches the feed link.
+3. Decide whether the README should say the live demo is offline (the film link still works).
+
+---
+
 ## Nov 3: demo film finished
 
 - **"Price kya hai?"**, 2:59 at 1080p: `D:\film\price-kya-hai.mp4` (outside the repo; it shows real people,
